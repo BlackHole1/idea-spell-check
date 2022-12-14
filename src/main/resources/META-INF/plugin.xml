@@ -1,18 +1,25 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <id>com.github.blackhole1.ideaspellcheck</id>
-    <name>IntelliJ Platform Plugin idea-spell-check</name>
-    <vendor>blackhole1</vendor>
+    <name>CSpell Check</name>
+    <vendor>Black-Hole</vendor>
+
+    <extensionPoints>
+        <extensionPoint name="spellchecker.dictionary.runtimeDictionaryProvider"
+                        interface="com.intellij.spellchecker.dictionary.RuntimeDictionaryProvider" dynamic="true"/>
+    </extensionPoints>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>NodeJS</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.github.blackhole1.ideaspellcheck.services.MyApplicationService"/>
-        <projectService serviceImplementation="com.github.blackhole1.ideaspellcheck.services.MyProjectService"/>
+        <projectService serviceImplementation="com.github.blackhole1.ideaspellcheck.services.SCProjectService"/>
+        <spellchecker.dictionary.runtimeDictionaryProvider
+                implementation="com.github.blackhole1.ideaspellcheck.dict.RuntimeDictionaryProvider"/>
     </extensions>
 
     <applicationListeners>
-        <listener class="com.github.blackhole1.ideaspellcheck.listeners.MyProjectManagerListener"
+        <listener class="com.github.blackhole1.ideaspellcheck.listeners.SCProjectManagerListener"
                   topic="com.intellij.openapi.project.ProjectManagerListener"/>
     </applicationListeners>
 </idea-plugin>
