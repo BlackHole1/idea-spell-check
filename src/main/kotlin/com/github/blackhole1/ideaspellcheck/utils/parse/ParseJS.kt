@@ -1,8 +1,8 @@
 package com.github.blackhole1.ideaspellcheck.utils.parse
 
+import com.intellij.javascript.nodejs.interpreter.local.NodeJsLocalInterpreterManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import com.jetbrains.nodejs.run.NodeJsRunConfiguration
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -23,8 +23,10 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
     }
 }
 
+private val interpreter = NodeJsLocalInterpreterManager.getInstance().detectMostRelevant()
+
 fun parseJS(file: File, project: Project): List<String>? {
-    val exePath = NodeJsRunConfiguration.getDefaultRunConfiguration(project)?.exePath ?: return null
+    val exePath = interpreter?.interpreterSystemDependentPath ?: return null
     val cwd = project.guessProjectDir()?.path ?: return null
 
     try {

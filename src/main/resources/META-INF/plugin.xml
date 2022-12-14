@@ -13,13 +13,9 @@
     <depends>NodeJS</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCStartupActivity"/>
         <projectService serviceImplementation="com.github.blackhole1.ideaspellcheck.services.SCProjectService"/>
         <spellchecker.dictionary.runtimeDictionaryProvider
                 implementation="com.github.blackhole1.ideaspellcheck.dict.RuntimeDictionaryProvider"/>
     </extensions>
-
-    <applicationListeners>
-        <listener class="com.github.blackhole1.ideaspellcheck.listeners.SCProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
 </idea-plugin>
