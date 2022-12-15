@@ -3,7 +3,6 @@ package com.github.blackhole1.ideaspellcheck.services
 import com.github.blackhole1.ideaspellcheck.replaceWords
 import com.github.blackhole1.ideaspellcheck.utils.findCSpellConfigFile
 import com.github.blackhole1.ideaspellcheck.utils.parseCSpellConfig
-import com.intellij.lang.documentation.ide.actions.targetsFromEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import kotlinx.coroutines.*
