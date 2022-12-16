@@ -4,9 +4,13 @@
 
 ## [Unreleased]
 
+## [0.0.3]
+### Docs
+- Improve README.md
+
 ## [0.0.2]
 ### Chore
-- Improce Plugin icon
+- Improve Plugin icon
 
 ## [0.0.1]
 ### Added
