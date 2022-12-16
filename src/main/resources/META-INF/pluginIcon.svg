@@ -1,11 +1,33 @@
-<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M32.0845 7.94025V4H24.0203V7.9896H16.029V4H7.91553V7.94025H4V36H16.0044V32.0045C16.0058 30.9457 16.4274 29.9308 17.1766 29.1826C17.9258 28.4345 18.9412 28.0143 20 28.0143C21.0588 28.0143 22.0743 28.4345 22.8234 29.1826C23.5726 29.9308 23.9942 30.9457 23.9956 32.0045V36H36V7.94025H32.0845Z"
-          fill="url(#paint0_linear)"/>
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:svgjs="http://svgjs.dev/svgjs" viewBox="0 0 800 800">
     <defs>
-        <linearGradient id="paint0_linear" x1="2.94192" y1="4.89955" x2="37.7772" y2="39.7345" gradientUnits="userSpaceOnUse">
-            <stop offset="0.15937" stop-color="#3BEA62"/>
-            <stop offset="0.5404" stop-color="#3C99CC"/>
-            <stop offset="0.93739" stop-color="#6B57FF"/>
+        <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="vvvortex-grad">
+            <stop stop-color="hsl(162, 100%, 58%)" stop-opacity="1" offset="0%"></stop>
+            <stop stop-color="hsl(270, 73%, 53%)" stop-opacity="1" offset="100%"></stop>
         </linearGradient>
     </defs>
+    <g stroke="url(#vvvortex-grad)" fill="none" stroke-linecap="round">
+        <circle r="330" cx="400" cy="400" stroke-width="11" stroke-dasharray="44 33" stroke-dashoffset="25" transform="rotate(299, 400, 400)" opacity="0.74"></circle>
+        <circle r="315" cx="400" cy="400" stroke-width="11" stroke-dasharray="50 17" stroke-dashoffset="25" transform="rotate(153, 400, 400)" opacity="0.77"></circle>
+        <circle r="300" cx="400" cy="400" stroke-width="10" stroke-dasharray="48 37" stroke-dashoffset="25" transform="rotate(298, 400, 400)" opacity="0.31"></circle>
+        <circle r="285" cx="400" cy="400" stroke-width="10" stroke-dasharray="31 30" stroke-dashoffset="25" transform="rotate(116, 400, 400)" opacity="0.83"></circle>
+        <circle r="270" cx="400" cy="400" stroke-width="10" stroke-dasharray="43 19" stroke-dashoffset="25" transform="rotate(118, 400, 400)" opacity="0.18"></circle>
+        <circle r="255" cx="400" cy="400" stroke-width="10" stroke-dasharray="54 55" stroke-dashoffset="25" transform="rotate(104, 400, 400)" opacity="0.61"></circle>
+        <circle r="240" cx="400" cy="400" stroke-width="9" stroke-dasharray="47 14" stroke-dashoffset="25" transform="rotate(96, 400, 400)" opacity="0.28"></circle>
+        <circle r="225" cx="400" cy="400" stroke-width="9" stroke-dasharray="33 35" stroke-dashoffset="25" transform="rotate(156, 400, 400)" opacity="0.98"></circle>
+        <circle r="210" cx="400" cy="400" stroke-width="9" stroke-dasharray="15 19" stroke-dashoffset="25" transform="rotate(172, 400, 400)" opacity="0.18"></circle>
+        <circle r="195" cx="400" cy="400" stroke-width="8" stroke-dasharray="51 13" stroke-dashoffset="25" transform="rotate(1, 400, 400)" opacity="0.39"></circle>
+        <circle r="180" cx="400" cy="400" stroke-width="8" stroke-dasharray="48 52" stroke-dashoffset="25" transform="rotate(153, 400, 400)" opacity="0.22"></circle>
+        <circle r="165" cx="400" cy="400" stroke-width="8" stroke-dasharray="38 51" stroke-dashoffset="25" transform="rotate(316, 400, 400)" opacity="0.22"></circle>
+        <circle r="150" cx="400" cy="400" stroke-width="8" stroke-dasharray="20 28" stroke-dashoffset="25" transform="rotate(160, 400, 400)" opacity="0.22"></circle>
+        <circle r="135" cx="400" cy="400" stroke-width="7" stroke-dasharray="52 47" stroke-dashoffset="25" transform="rotate(307, 400, 400)" opacity="0.52"></circle>
+        <circle r="120" cx="400" cy="400" stroke-width="7" stroke-dasharray="29 47" stroke-dashoffset="25" transform="rotate(220, 400, 400)" opacity="0.20"></circle>
+        <circle r="105" cx="400" cy="400" stroke-width="7" stroke-dasharray="53 10" stroke-dashoffset="25" transform="rotate(87, 400, 400)" opacity="0.69"></circle>
+        <circle r="90" cx="400" cy="400" stroke-width="6" stroke-dasharray="43 32" stroke-dashoffset="25" transform="rotate(241, 400, 400)" opacity="0.27"></circle>
+        <circle r="75" cx="400" cy="400" stroke-width="6" stroke-dasharray="35 17" stroke-dashoffset="25" transform="rotate(242, 400, 400)" opacity="0.10"></circle>
+        <circle r="60" cx="400" cy="400" stroke-width="6" stroke-dasharray="44 31" stroke-dashoffset="25" transform="rotate(290, 400, 400)" opacity="0.84"></circle>
+        <circle r="45" cx="400" cy="400" stroke-width="6" stroke-dasharray="18 33" stroke-dashoffset="25" transform="rotate(245, 400, 400)" opacity="0.81"></circle>
+        <circle r="30" cx="400" cy="400" stroke-width="5" stroke-dasharray="35 20" stroke-dashoffset="25" transform="rotate(298, 400, 400)" opacity="0.36"></circle>
+        <circle r="15" cx="400" cy="400" stroke-width="5" stroke-dasharray="39 40" stroke-dashoffset="25" transform="rotate(285, 400, 400)" opacity="0.45"></circle>
+    </g>
 </svg>
