@@ -22,9 +22,9 @@ Support configuration file:
 - cspell.yml
 - package.json `cspell` field
 
-![example](https://raw.githubusercontent.com/BlackHole1/idea-spell-check/main/assets/example.gif)
-
 <!-- Plugin description end -->
+
+![example](https://raw.githubusercontent.com/BlackHole1/idea-spell-check/main/assets/example.gif)
 
 ## Installation
 
