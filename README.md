@@ -1,8 +1,8 @@
 # idea-spell-check
 
 ![Build](https://github.com/BlackHole1/idea-spell-check/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/PLUGIN_ID.svg)](https://plugins.jetbrains.com/plugin/PLUGIN_ID)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/PLUGIN_ID.svg)](https://plugins.jetbrains.com/plugin/PLUGIN_ID)
+[![Version](https://img.shields.io/jetbrains/plugin/v/20676-cspell-check.svg)](https://plugins.jetbrains.com/plugin/20676-cspell-check)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/20676-cspell-check.svg)](https://plugins.jetbrains.com/plugin/20676-cspell-check)
 
 <!-- Plugin description -->
 
@@ -30,7 +30,7 @@ Support configuration file:
 
 - Using IDE built-in plugin system:
   
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "idea-spell-check"</kbd> >
+  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "Cspell Check"</kbd> >
   <kbd>Install Plugin</kbd>
   
 - Manually:
