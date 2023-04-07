@@ -18,6 +18,26 @@ private val cspellFileName = listOf(
 )
 
 fun findCSpellConfigFile(path: String): File? {
+    // for .vscode
+    val vscode = "$path${File.separator}.vscode"
+    val vscodeFile = File(vscode)
+    if (vscodeFile.isDirectory) {
+        val res = findCSpellConfigFile(vscode)
+        if (res != null) {
+            return res
+        }
+    }
+
+    // for .idea
+    val idea = "$path${File.separator}.idea"
+    val ideaFile = File(idea)
+    if (ideaFile.isDirectory) {
+        val res = findCSpellConfigFile(idea)
+        if (res != null) {
+            return res
+        }
+    }
+
     for (fileName in cspellFileName) {
         val filePath = "$path${File.separator}$fileName"
         val file = File(filePath)
