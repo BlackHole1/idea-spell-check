@@ -11,7 +11,11 @@ data class Words(
 
 fun parseYAML(file: File): List<String>? {
     return try {
-        val data = Yaml.decodeFromString(Words.serializer(), file.readText())
+        val raw = file.readText()
+        // See: https://github.com/Him188/yamlkt/issues/52
+        val content = raw.replace(Regex("^\\$.+:.+$", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)), "")
+
+        val data = Yaml.decodeFromString(Words.serializer(), content)
         return data.words
     } catch (e: Exception) {
         null
