@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+## [0.0.7] - 2023-08-02
+- chore(version): support 2023.2 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/23
+- chore(version): upgrade version to v0.0.7 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/24
+
 ## [0.0.6] - 2023-07-18
 - fix(yaml): not support $ prefix key by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/20
 - chore(version): upgrade version to v0.0.6 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/21
@@ -23,7 +27,8 @@
 ### Added
 - Init Project
 
-[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.3...v0.0.6
 [0.0.3]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.1...v0.0.2
