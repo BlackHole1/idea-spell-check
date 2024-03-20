@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.0.9] - 2024-03-20
+- Changelog update - `v0.0.8` by @github-actions in https://github.com/BlackHole1/idea-spell-check/pull/29
+- fix(ci): cannot build by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/31
+- chore(version): support 2024.1 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/30
+- chore(version): upgrade version to v0.0.9 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/32
+
 ## [0.0.8] - 2023-12-07
 - Changelog update - `v0.0.7` by @github-actions in https://github.com/BlackHole1/idea-spell-check/pull/25
 - chore(version): support 2023.3 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/27
@@ -32,7 +38,8 @@
 ### Added
 - Init Project
 
-[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.3...v0.0.6
