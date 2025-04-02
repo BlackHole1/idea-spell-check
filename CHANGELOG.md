@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.0.12] - 2025-04-02
+- Changelog update - `v0.0.11` by @github-actions in https://github.com/BlackHole1/idea-spell-check/pull/41
+- chore(version): support 2025.1 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/43
+- chore(version): upgrade version to v0.0.12 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/44
+
 ## [0.0.11] - 2024-11-14
 - fix(ci): no space left on device by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/39
 - chore(version): support 2024.3 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/38
@@ -43,7 +48,8 @@
 ### Added
 - Init Project
 
-[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.11...HEAD
+[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.12...HEAD
+[0.0.12]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.9...v0.0.11
 [0.0.9]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.7...v0.0.8
