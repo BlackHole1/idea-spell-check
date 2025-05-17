@@ -57,7 +57,7 @@ class SCProjectConfigurable : Configurable {
         return settingsComponent.panel
     }
 
-    override fun isModified() = SCProjectSettings.instance(project).state != settingsComponent.pathsListModel.items
+    override fun isModified() = SCProjectSettings.instance(project).state.customSearchPaths != settingsComponent.pathsListModel.items
 
     override fun apply() {
         SCProjectSettings.instance(project).setCustomSearchPaths(settingsComponent.pathsListModel.items)
