@@ -15,6 +15,11 @@
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCStartupActivity"/>
         <projectService serviceImplementation="com.github.blackhole1.ideaspellcheck.services.SCProjectService"/>
+        <projectConfigurable
+                parentId="tools"
+                provider="com.github.blackhole1.ideaspellcheck.settings.SCProjectConfigurableProvider"
+                displayName="CSpell Check"
+        />
         <spellchecker.dictionary.runtimeDictionaryProvider
                 implementation="com.github.blackhole1.ideaspellcheck.dict.RuntimeDictionaryProvider"/>
     </extensions>
