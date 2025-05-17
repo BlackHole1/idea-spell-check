@@ -21,7 +21,7 @@ internal class SCProjectSettings : SimplePersistentStateComponent<SCProjectSetti
     }
 
     fun setCustomSearchPaths(paths: List<String>) {
-        state.customSearchPaths = paths as MutableList<String>
+        state.customSearchPaths = paths.toMutableList()
     }
 
     companion object {
