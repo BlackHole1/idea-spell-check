@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-09-05
+
+- Changelog update - `v0.1.1` by @github-actions[bot] in https://github.com/BlackHole1/idea-spell-check/pull/51
+- fix(gradle): compatibility range is `223.0 — 223.*` by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/52
+- chore: bump version to 0.1.2 by @BlackHole1 in https://github.com/BlackHole1/idea-spell-check/pull/53
+
 ## [0.1.1] - 2025-09-05
 
 - Changelog update - `v0.1.0` by @github-actions[bot] in https://github.com/BlackHole1/idea-spell-check/pull/47
@@ -69,7 +75,8 @@
 
 - Init Project
 
-[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/BlackHole1/idea-spell-check/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/BlackHole1/idea-spell-check/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/BlackHole1/idea-spell-check/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.12...v0.1.0
 [0.0.12]: https://github.com/BlackHole1/idea-spell-check/compare/v0.0.11...v0.0.12
