@@ -14,7 +14,7 @@ private fun getAvailableNodeExecutable(settings: SCProjectSettings): String? {
             return configuredPath
         }
     }
-    
+
     // Priority 2: Use system auto-discovered Node.js
     return NodejsFinder.findNodejsExecutables().firstOrNull()
 }
@@ -24,6 +24,7 @@ fun parseCSpellConfig(file: File, project: Project): List<String>? {
         "json" -> {
             return parseJSON(file)
         }
+
         "js", "cjs" -> {
             val settings = SCProjectSettings.instance(project)
             val nodeExecutable = getAvailableNodeExecutable(settings)
@@ -33,6 +34,7 @@ fun parseCSpellConfig(file: File, project: Project): List<String>? {
             }
             return parseJS(file, project)
         }
+
         "yaml", "yml" -> {
             return parseYAML(file)
         }

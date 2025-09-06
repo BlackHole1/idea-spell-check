@@ -2,11 +2,14 @@ package com.github.blackhole1.ideaspellcheck.utils.parse
 
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.github.blackhole1.ideaspellcheck.utils.NotificationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+
+private val logger = Logger.getInstance("CSpell.ParseJS")
 
 fun runCommand(vararg arguments: String, workingDir: File): String? {
     return try {
@@ -18,27 +21,27 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
 
         proc.waitFor(5, TimeUnit.SECONDS)
         proc.inputStream.bufferedReader().readText()
-    } catch(e: IOException) {
-        e.printStackTrace()
+    } catch (e: IOException) {
+        logger.warn("Failed to run Node.js command: ${arguments.joinToString(" ")} in $workingDir", e)
         null
     }
 }
 
-fun parseJS(file: File, project: Project ): List<String>? {
+fun parseJS(file: File, project: Project): List<String>? {
     val settings = SCProjectSettings.instance(project)
     val nodeExecutablePath = settings.state.nodeExecutablePath
-    
+
     if (nodeExecutablePath.isNullOrBlank()) {
         // Node.js path not configured, return null to indicate unavailable
         return null
     }
-    
+
     val nodeFile = File(nodeExecutablePath)
     if (!nodeFile.exists() || !nodeFile.canExecute()) {
         NotificationManager.showNodeExecutableErrorNotification(project, nodeExecutablePath)
         return null
     }
-    
+
     val cwd = project.guessProjectDir()?.path
     if (cwd == null) {
         NotificationManager.showProjectDirErrorNotification(project)
