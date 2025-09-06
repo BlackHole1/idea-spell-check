@@ -1,5 +1,6 @@
 package com.github.blackhole1.ideaspellcheck.utils.parse
 
+import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -9,10 +10,13 @@ import java.io.File
 data class CSpellWordsFormat(
     val words: List<String>
 )
+
 @Serializable
 data class PackageJSONFormat(
-    val cspell: CSpellWordsFormat
+    val cspell: CSpellWordsFormat? = null
 )
+
+private val logger = Logger.getInstance("CSpell.ParseJSON")
 
 val json = Json {
     ignoreUnknownKeys = true
@@ -24,12 +28,13 @@ fun parseJSON(file: File): List<String>? {
     return try {
         if (isPackageJSON) {
             val parseRawJSON = json.decodeFromString<PackageJSONFormat>(file.readText())
-            parseRawJSON.cspell.words
+            parseRawJSON.cspell?.words ?: emptyList()
         } else {
             val parseRawJSON = json.decodeFromString<CSpellWordsFormat>(file.readText())
             parseRawJSON.words
         }
-    } catch(e: Exception) {
+    } catch (e: Exception) {
+        logger.debug("Failed to parse JSON from ${file.path}", e)
         null
     }
 

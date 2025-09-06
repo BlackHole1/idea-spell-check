@@ -1,59 +1,59 @@
 package com.github.blackhole1.ideaspellcheck.services
 
-import com.github.blackhole1.ideaspellcheck.replaceWords
-import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
-import com.github.blackhole1.ideaspellcheck.utils.findCSpellConfigFile
-import com.github.blackhole1.ideaspellcheck.utils.parseCSpellConfig
+import com.github.blackhole1.ideaspellcheck.listener.CSpellConfigFileManager
+import com.github.blackhole1.ideaspellcheck.listener.CSpellFileListener
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.vfs.VirtualFileManager
 import kotlinx.coroutines.*
-import java.io.File
 
 @Service(Service.Level.PROJECT)
-class SCProjectService(project: Project) {
-    private val scope = CoroutineScope(Dispatchers.Default)
+class SCProjectService(private val project: Project) : Disposable {
+    private val logger = Logger.getInstance(SCProjectService::class.java)
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val configManager = project.getService(CSpellConfigFileManager::class.java)
+    private lateinit var fileListener: CSpellFileListener
 
     init {
-        watch(project)
+        initializeFileWatching()
     }
 
-    private fun watch(project: Project) {
+    private fun initializeFileWatching() {
         scope.launch {
-            while (isActive) {
-                if (project.isDisposed) {
-                    scope.cancel()
-                    break
-                }
+            try {
+                // Initialize scan of all configuration files
+                configManager.initialize()
 
-                getWordsFromRoot(project)
-                getWordsFromCustomPaths(project)
+                // Create file listener
+                fileListener = CSpellFileListener(project, configManager)
 
-                delay(800L)
+                // Register to message bus
+                project.messageBus.connect(this@SCProjectService).subscribe(VirtualFileManager.VFS_CHANGES, fileListener)
+
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.warn("Failed to initialize file watching", e)
+                // Keep scope alive to allow rescan/retry.
             }
         }
     }
 
-    private fun getWordsFromRoot(project: Project) {
-        project.guessProjectDir()?.let { projectDir ->
-            findCSpellConfigFile(projectDir.path)?.let { configFile ->
-                parseCSpellConfig(configFile, project)?.let { words ->
-                    replaceWords(words)
-                }
-            }
+    /**
+     * Manually trigger rescan of all configuration files
+     * Called when settings change
+     */
+    fun rescanAllConfigFiles() {
+        scope.launch {
+            configManager.initialize()
         }
     }
 
-    private fun getWordsFromCustomPaths(project: Project) {
-        val settings = SCProjectSettings.instance(project)
-        for (customPath in settings.state.customSearchPaths) {
-            if (File(customPath).isDirectory) {
-                findCSpellConfigFile(customPath)?.let { configFile ->
-                    parseCSpellConfig(configFile, project)?.let { words ->
-                        replaceWords(words)
-                    }
-                }
-            }
-        }
+    override fun dispose() {
+        // Message bus is connected with this Disposable; framework will handle disconnect.
+        // CSpellConfigFileManager is a project service; the platform disposes it.
+        scope.cancel()
     }
 }
