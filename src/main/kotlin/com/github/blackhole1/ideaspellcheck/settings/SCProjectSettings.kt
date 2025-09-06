@@ -18,10 +18,15 @@ import com.intellij.openapi.project.Project
 internal class SCProjectSettings : SimplePersistentStateComponent<SCProjectSettings.State>(State()) {
     internal class State : BaseState() {
         var customSearchPaths by list<String>()
+        var nodeExecutablePath by string()
     }
 
     fun setCustomSearchPaths(paths: List<String>) {
         state.customSearchPaths = paths.toMutableList()
+    }
+
+    fun setNodeExecutablePath(path: String?) {
+        state.nodeExecutablePath = path
     }
 
     companion object {

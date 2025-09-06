@@ -4,11 +4,13 @@ import com.github.blackhole1.ideaspellcheck.replaceWords
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.github.blackhole1.ideaspellcheck.utils.findCSpellConfigFile
 import com.github.blackhole1.ideaspellcheck.utils.parseCSpellConfig
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import kotlinx.coroutines.*
 import java.io.File
 
+@Service(Service.Level.PROJECT)
 class SCProjectService(project: Project) {
     private val scope = CoroutineScope(Dispatchers.Default)
 

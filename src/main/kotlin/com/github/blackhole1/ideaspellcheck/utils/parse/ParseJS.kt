@@ -1,6 +1,7 @@
 package com.github.blackhole1.ideaspellcheck.utils.parse
 
-import com.intellij.javascript.nodejs.interpreter.local.NodeJsLocalInterpreterManager
+import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
+import com.github.blackhole1.ideaspellcheck.utils.NotificationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import java.io.File
@@ -23,18 +24,37 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
     }
 }
 
-private val interpreter = NodeJsLocalInterpreterManager.getInstance().detectMostRelevant()
-
-fun parseJS(file: File, project: Project): List<String>? {
-    val exePath = interpreter?.interpreterSystemDependentPath ?: return null
-    val cwd = project.guessProjectDir()?.path ?: return null
+fun parseJS(file: File, project: Project ): List<String>? {
+    val settings = SCProjectSettings.instance(project)
+    val nodeExecutablePath = settings.state.nodeExecutablePath
+    
+    if (nodeExecutablePath.isNullOrBlank()) {
+        // Node.js path not configured, return null to indicate unavailable
+        return null
+    }
+    
+    val nodeFile = File(nodeExecutablePath)
+    if (!nodeFile.exists() || !nodeFile.canExecute()) {
+        NotificationManager.showNodeExecutableErrorNotification(project, nodeExecutablePath)
+        return null
+    }
+    
+    val cwd = project.guessProjectDir()?.path
+    if (cwd == null) {
+        NotificationManager.showProjectDirErrorNotification(project)
+        return null
+    }
 
     try {
-        runCommand(exePath, "-e", "const c = require('${file.path}'); console.log(c.words.join('-&&-'))", workingDir = File(cwd))?.let {
-            return it.trim().split("-&&-")
+        val command = "const c = require('${file.path.replace("\\", "\\\\")}'); console.log(c.words.join('-&&-'))"
+        runCommand(nodeExecutablePath, "-e", command, workingDir = File(cwd))?.let {
+            val result = it.trim()
+            if (result.isNotEmpty()) {
+                return result.split("-&&-").filter { word -> word.isNotBlank() }
+            }
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        NotificationManager.showParseErrorNotification(project, file.path, e.message)
         return null
     }
 
