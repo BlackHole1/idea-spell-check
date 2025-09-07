@@ -12,7 +12,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCStartupActivity"/>
+        <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCProjectActivity"/>
         <projectConfigurable
                 parentId="tools"
                 provider="com.github.blackhole1.ideaspellcheck.settings.SCProjectConfigurableProvider"
