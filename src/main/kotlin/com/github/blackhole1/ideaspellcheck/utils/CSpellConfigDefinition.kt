@@ -66,7 +66,7 @@ object CSpellConfigDefinition {
     /**
      * Get priority of a config file (lower number = higher priority)
      */
-    fun getPriority(file: File): Int {
+    private fun getPriority(file: File): Int {
         val parentDir = file.parent ?: return Int.MAX_VALUE
         val isInVSCode = File(parentDir).name == ".vscode"
 

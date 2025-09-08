@@ -27,7 +27,7 @@ class SCProjectService(private val project: Project) : Disposable {
                 configManager.initialize()
 
                 // Create file listener
-                fileListener = CSpellFileListener(project, configManager)
+                fileListener = CSpellFileListener(configManager)
 
                 // Register to message bus
                 project.messageBus.connect(this@SCProjectService).subscribe(VirtualFileManager.VFS_CHANGES, fileListener)
