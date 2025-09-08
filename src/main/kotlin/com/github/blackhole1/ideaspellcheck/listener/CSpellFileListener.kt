@@ -1,7 +1,6 @@
 package com.github.blackhole1.ideaspellcheck.listener
 
 import com.github.blackhole1.ideaspellcheck.utils.CSpellConfigDefinition
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -12,7 +11,6 @@ import com.intellij.openapi.vfs.newvfs.events.*
  * Monitors file system change events and forwards relevant events to the configuration manager
  */
 class CSpellFileListener(
-    private val project: Project,
     private val configManager: CSpellConfigFileManager
 ) : BulkFileListener {
 

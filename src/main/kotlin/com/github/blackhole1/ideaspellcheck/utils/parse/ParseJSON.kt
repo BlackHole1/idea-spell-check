@@ -2,7 +2,6 @@ package com.github.blackhole1.ideaspellcheck.utils.parse
 
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
 

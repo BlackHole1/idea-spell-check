@@ -52,9 +52,9 @@ class SCProjectConfigurable : Configurable {
         val project: Project,
         val pathsListModel: CollectionListModel<String> = CollectionListModel<String>(),
     ) {
-        val pathsList: JBList<String> = JBList(pathsListModel)
+        private val pathsList: JBList<String> = JBList(pathsListModel)
         val nodeExecutableComboBox: ComboBox<String> = ComboBox<String>()
-        val browseButton: JButton = JButton("Browse...")
+        private val browseButton: JButton = JButton("Browse...")
 
         val panel: JPanel = createMainPanel()
 
@@ -275,7 +275,7 @@ class SCProjectConfigurable : Configurable {
 
         // Set saved path in ComboBox
         val savedPath = settings.state.nodeExecutablePath
-        if (savedPath != null && savedPath.isNotEmpty()) {
+        if (!savedPath.isNullOrEmpty()) {
             // Add saved path to ComboBox if it's not already there
             settingsComponent.addPathToComboBoxIfNotExists(savedPath)
             settingsComponent.nodeExecutableComboBox.selectedItem = savedPath

@@ -9,6 +9,7 @@ object NodejsFinder {
         val searchPaths = getSearchPaths()
 
         return searchPaths
+            .asSequence()
             .filter { it.isNotEmpty() }
             .map { path -> File(path, executableName) }
             .filter { it.exists() && it.canExecute() }
@@ -20,6 +21,7 @@ object NodejsFinder {
                 }
             }
             .distinct()
+            .toList()
     }
 
     private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
