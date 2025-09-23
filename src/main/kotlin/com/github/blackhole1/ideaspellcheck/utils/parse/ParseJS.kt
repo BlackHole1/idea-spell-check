@@ -27,7 +27,7 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
     }
 }
 
-fun parseJS(file: File, project: Project): List<String>? {
+fun parseJS(file: File, project: Project): ParsedCSpellConfig? {
     val settings = SCProjectSettings.instance(project)
     val nodeExecutablePath = settings.state.nodeExecutablePath
 
@@ -49,11 +49,62 @@ fun parseJS(file: File, project: Project): List<String>? {
     }
 
     try {
-        val command = "const c = require('${file.path.replace("\\", "\\\\")}'); console.log(c.words.join('-&&-'))"
+        val sanitizedPath = file.path
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+
+        val command = """
+            const path = require('path');
+            const configPath = '$sanitizedPath';
+
+            try {
+                const rawConfig = require(configPath);
+                const config = rawConfig && rawConfig.default ? rawConfig.default : rawConfig;
+
+                const words = Array.isArray(config && config.words)
+                    ? config.words.filter((value) => typeof value === 'string')
+                    : [];
+
+                const dictionaryDefinitions = Array.isArray(config && config.dictionaryDefinitions)
+                    ? config.dictionaryDefinitions.map((def) => {
+                        if (!def || typeof def !== 'object') {
+                            return {};
+                        }
+
+                        const normalized = {};
+                        if (typeof def.name === 'string') {
+                            normalized.name = def.name;
+                        }
+                        if (typeof def.path === 'string') {
+                            normalized.path = def.path;
+                        }
+                        if (typeof def.addWords === 'boolean') {
+                            normalized.addWords = def.addWords;
+                        }
+                        return normalized;
+                    }).filter((entry) => Object.keys(entry).length > 0)
+                    : [];
+
+                const dictionaries = Array.isArray(config && config.dictionaries)
+                    ? config.dictionaries.filter((value) => typeof value === 'string')
+                    : [];
+
+                const output = { words, dictionaryDefinitions, dictionaries };
+                process.stdout.write(JSON.stringify(output));
+            } catch (error) {
+                console.error(error && error.message ? error.message : String(error));
+            }
+        """.trimIndent()
         runCommand(nodeExecutablePath, "-e", command, workingDir = File(cwd))?.let {
             val result = it.trim()
             if (result.isNotEmpty()) {
-                return result.split("-&&-").filter { word -> word.isNotBlank() }
+                return try {
+                    val config = json.decodeFromString<CSpellWordsFormat>(result)
+                    ParsedCSpellConfig(config.words, config.dictionaryDefinitions, config.dictionaries)
+                } catch (e: Exception) {
+                    logger.debug("Failed to decode JS output from ${file.path}", e)
+                    null
+                }
             }
         }
     } catch (e: Exception) {
@@ -61,5 +112,5 @@ fun parseJS(file: File, project: Project): List<String>? {
         return null
     }
 
-    return null
+    return ParsedCSpellConfig()
 }

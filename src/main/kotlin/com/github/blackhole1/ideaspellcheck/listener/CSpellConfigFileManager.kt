@@ -12,6 +12,7 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -36,6 +37,16 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * value: list of words parsed from that file
      */
     private val configFileWords = ConcurrentHashMap<String, List<String>>()
+
+    /**
+     * Track dictionary file paths (each config file -> set of dependent dictionary absolute paths)
+     */
+    private val configFileDictionaryPaths = ConcurrentHashMap<String, Set<String>>()
+
+    /**
+     * Reverse index from dictionary files to config files to quickly locate impacted configurations
+     */
+    private val dictionaryFileToConfigs = ConcurrentHashMap<String, MutableSet<String>>()
 
     /**
      * Debounce timer management
@@ -70,6 +81,14 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
             }
         }
 
+        // Add directories containing dictionary files
+        dictionaryFileToConfigs.keys.forEach { dictionaryPath ->
+            val parent = File(dictionaryPath).parentFile
+            if (parent != null && parent.isDirectory) {
+                paths.add(toSystemIndependentName(parent.absolutePath).trimEnd('/'))
+            }
+        }
+
         return paths.toList()
     }
 
@@ -79,6 +98,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     suspend fun initialize() = withContext(Dispatchers.IO) {
         activeConfigFiles.clear()
         configFileWords.clear()
+        configFileDictionaryPaths.clear()
+        dictionaryFileToConfigs.clear()
         val allPaths = getAllWatchPaths()
 
         for (path in allPaths) {
@@ -130,9 +151,11 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     fun onFileDeleted(filePath: String) {
         val file = File(filePath)
         val searchRoot = resolveSearchRoot(file) ?: return
+        val configPath = normalizeFilePath(file.absolutePath)
 
         // Remove from word mapping
-        configFileWords.remove(filePath)
+        configFileWords.remove(configPath)
+        removeDictionaryMappings(configPath)
         // Cancel pending debounce
         debounceTimers.remove(filePath)?.cancel()
 
@@ -184,11 +207,18 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      */
     private suspend fun loadConfigFile(file: File) = withContext(Dispatchers.IO) {
         try {
-            val words = parseCSpellConfig(file, project) ?: emptyList()
-            configFileWords[file.absolutePath] = words
+            val configPath = normalizeFilePath(file.absolutePath)
+            val result = parseCSpellConfig(file, project)
+            val words = result?.words ?: emptyList()
+            val dictionaryPaths = result?.dictionaryPaths ?: emptySet()
+
+            configFileWords[configPath] = words
+            updateDictionaryMappings(configPath, dictionaryPaths)
         } catch (e: Exception) {
             logger.warn("Failed to parse CSpell config: ${file.absolutePath}", e)
-            configFileWords[file.absolutePath] = emptyList()
+            val configPath = normalizeFilePath(file.absolutePath)
+            configFileWords[configPath] = emptyList()
+            updateDictionaryMappings(configPath, emptySet())
         }
     }
 
@@ -200,7 +230,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
 
         // Collect words from all active configuration files
         for (activeFile in activeConfigFiles.values) {
-            val words = configFileWords[activeFile.absolutePath] ?: emptyList()
+            val configPath = normalizeFilePath(activeFile.absolutePath)
+            val words = configFileWords[configPath] ?: emptyList()
             allWords.addAll(words)
         }
 
@@ -208,6 +239,54 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         com.github.blackhole1.ideaspellcheck.replaceWords(allWords.toList(), project)
     }
 
+    fun isDictionaryFile(path: String): Boolean {
+        val normalized = normalizeFilePath(path)
+        return dictionaryFileToConfigs.containsKey(normalized)
+    }
+
+    fun onDictionaryFileChanged(path: String) {
+        val normalized = normalizeFilePath(path)
+        val configs = dictionaryFileToConfigs[normalized]?.toList() ?: emptyList()
+        configs.forEach { configPath ->
+            debounceParseFile(File(configPath))
+        }
+    }
+
+    private fun updateDictionaryMappings(configPath: String, newPaths: Set<String>) {
+        val normalizedNew = newPaths.map { normalizeFilePath(it) }.toSet()
+        val previous = configFileDictionaryPaths.put(configPath, normalizedNew) ?: emptySet()
+
+        val removed = previous - normalizedNew
+        val added = normalizedNew - previous
+
+        removed.forEach { dictionaryPath ->
+            dictionaryFileToConfigs.compute(dictionaryPath) { _, configs ->
+                configs?.remove(configPath)
+                if (configs != null && configs.isEmpty()) null else configs
+            }
+        }
+
+        added.forEach { dictionaryPath ->
+            val configs = dictionaryFileToConfigs.computeIfAbsent(dictionaryPath) {
+                Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+            }
+            configs.add(configPath)
+        }
+    }
+
+    private fun removeDictionaryMappings(configPath: String) {
+        val previous = configFileDictionaryPaths.remove(configPath) ?: emptySet()
+        previous.forEach { dictionaryPath ->
+            dictionaryFileToConfigs.compute(dictionaryPath) { _, configs ->
+                configs?.remove(configPath)
+                if (configs != null && configs.isEmpty()) null else configs
+            }
+        }
+    }
+
+    private fun normalizeFilePath(path: String): String {
+        return toSystemIndependentName(File(path).absolutePath)
+    }
 
     /**
      * Check if file is the currently active configuration file

@@ -33,7 +33,12 @@ class CSpellFileListener(
     private fun handleFileCreated(event: VFileCreateEvent) {
         val filePath = event.path
 
-        if (isRelevantPath(filePath)) {
+        if (configManager.isDictionaryFile(filePath)) {
+            configManager.onDictionaryFileChanged(filePath)
+            return
+        }
+
+        if (isConfigFileUnderWatch(filePath)) {
             configManager.onFileCreated(filePath)
         }
     }
@@ -44,7 +49,12 @@ class CSpellFileListener(
     private fun handleFileChanged(event: VFileContentChangeEvent) {
         val filePath = event.file.path
 
-        if (isRelevantPath(filePath)) {
+        if (configManager.isDictionaryFile(filePath)) {
+            configManager.onDictionaryFileChanged(filePath)
+            return
+        }
+
+        if (isConfigFileUnderWatch(filePath)) {
             configManager.onFileChanged(filePath)
         }
     }
@@ -55,7 +65,12 @@ class CSpellFileListener(
     private fun handleFileDeleted(event: VFileDeleteEvent) {
         val filePath = event.file.path
 
-        if (isRelevantPath(filePath)) {
+        if (configManager.isDictionaryFile(filePath)) {
+            configManager.onDictionaryFileChanged(filePath)
+            return
+        }
+
+        if (isConfigFileUnderWatch(filePath)) {
             configManager.onFileDeleted(filePath)
         }
     }
@@ -68,12 +83,16 @@ class CSpellFileListener(
         val newPath = event.newPath
 
         // Handle old file deletion
-        if (isRelevantPath(oldPath)) {
+        if (configManager.isDictionaryFile(oldPath)) {
+            configManager.onDictionaryFileChanged(oldPath)
+        } else if (isConfigFileUnderWatch(oldPath)) {
             configManager.onFileDeleted(oldPath)
         }
 
         // Handle new file creation
-        if (isRelevantPath(newPath)) {
+        if (configManager.isDictionaryFile(newPath)) {
+            configManager.onDictionaryFileChanged(newPath)
+        } else if (isConfigFileUnderWatch(newPath)) {
             configManager.onFileCreated(newPath)
         }
     }
@@ -84,7 +103,12 @@ class CSpellFileListener(
     private fun handleFileCopied(event: VFileCopyEvent) {
         val filePath = event.newParent.path + "/" + event.newChildName
 
-        if (isRelevantPath(filePath)) {
+        if (configManager.isDictionaryFile(filePath)) {
+            configManager.onDictionaryFileChanged(filePath)
+            return
+        }
+
+        if (isConfigFileUnderWatch(filePath)) {
             configManager.onFileCreated(filePath)
         }
     }
@@ -97,15 +121,24 @@ class CSpellFileListener(
         val parent = event.file.parent ?: return
         val oldPath = parent.path + "/" + (event.oldValue as? String ?: return)
         val newPath = parent.path + "/" + (event.newValue as? String ?: return)
-        if (isRelevantPath(oldPath)) configManager.onFileDeleted(oldPath)
-        if (isRelevantPath(newPath)) configManager.onFileCreated(newPath)
+        if (configManager.isDictionaryFile(oldPath)) {
+            configManager.onDictionaryFileChanged(oldPath)
+        } else if (isConfigFileUnderWatch(oldPath)) {
+            configManager.onFileDeleted(oldPath)
+        }
+
+        if (configManager.isDictionaryFile(newPath)) {
+            configManager.onDictionaryFileChanged(newPath)
+        } else if (isConfigFileUnderWatch(newPath)) {
+            configManager.onFileCreated(newPath)
+        }
     }
 
     /**
      * Check if file path needs attention
      * Only process files that may contain CSpell configuration
      */
-    private fun isRelevantPath(filePath: String): Boolean {
+    private fun isConfigFileUnderWatch(filePath: String): Boolean {
         val fileName = filePath.substringAfterLast('/')
 
         if (CSpellConfigDefinition.getAllFileNames().contains(fileName)) {

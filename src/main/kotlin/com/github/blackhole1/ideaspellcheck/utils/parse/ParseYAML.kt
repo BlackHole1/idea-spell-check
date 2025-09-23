@@ -5,18 +5,22 @@ import net.mamoe.yamlkt.Yaml
 import java.io.File
 
 @Serializable
-data class Words(
-    val words: List<String>
+data class YamlCSpellFormat(
+    val words: List<String> = emptyList(),
+    val dictionaryDefinitions: List<DictionaryDefinition> = emptyList(),
+    val dictionaries: List<String> = emptyList()
 )
 
-fun parseYAML(file: File): List<String>? {
+private val yaml = Yaml.Default
+
+fun parseYAML(file: File): ParsedCSpellConfig? {
     return try {
         val raw = file.readText()
         // See: https://github.com/Him188/yamlkt/issues/52
         val content = raw.replace(Regex("^\\$.+:.+$", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)), "")
 
-        val data = Yaml.decodeFromString(Words.serializer(), content)
-        return data.words
+        val data = yaml.decodeFromString(YamlCSpellFormat.serializer(), content)
+        return ParsedCSpellConfig(data.words, data.dictionaryDefinitions, data.dictionaries)
     } catch (e: Exception) {
         null
     }
