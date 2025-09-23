@@ -1,6 +1,8 @@
 package com.github.blackhole1.ideaspellcheck.utils
 
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
+import com.github.blackhole1.ideaspellcheck.utils.parse.MergedWordList
+import com.github.blackhole1.ideaspellcheck.utils.parse.mergeWordsWithDictionaryDefinitions
 import com.github.blackhole1.ideaspellcheck.utils.parse.parseJS
 import com.github.blackhole1.ideaspellcheck.utils.parse.parseJSON
 import com.github.blackhole1.ideaspellcheck.utils.parse.parseYAML
@@ -19,11 +21,9 @@ private fun getAvailableNodeExecutable(settings: SCProjectSettings): String? {
     return NodejsFinder.findNodejsExecutables().firstOrNull()
 }
 
-fun parseCSpellConfig(file: File, project: Project): List<String>? {
-    when (file.extension) {
-        "json" -> {
-            return parseJSON(file)
-        }
+fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
+    val parsed = when (file.extension) {
+        "json" -> parseJSON(file)
 
         "js", "cjs" -> {
             val settings = SCProjectSettings.instance(project)
@@ -32,13 +32,12 @@ fun parseCSpellConfig(file: File, project: Project): List<String>? {
                 NotificationManager.showNodeJsConfigurationNotification(project)
                 return null
             }
-            return parseJS(file, project)
+            parseJS(file, project)
         }
 
-        "yaml", "yml" -> {
-            return parseYAML(file)
-        }
-    }
+        "yaml", "yml" -> parseYAML(file)
+        else -> null
+    } ?: return null
 
-    return null
+    return mergeWordsWithDictionaryDefinitions(parsed.words, parsed.dictionaryDefinitions, parsed.dictionaries, file, project)
 }

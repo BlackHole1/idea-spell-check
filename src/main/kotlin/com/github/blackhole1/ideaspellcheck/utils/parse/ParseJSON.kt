@@ -7,7 +7,9 @@ import java.io.File
 
 @Serializable
 data class CSpellWordsFormat(
-    val words: List<String>
+    val words: List<String> = emptyList(),
+    val dictionaryDefinitions: List<DictionaryDefinition> = emptyList(),
+    val dictionaries: List<String> = emptyList()
 )
 
 @Serializable
@@ -21,16 +23,21 @@ val json = Json {
     ignoreUnknownKeys = true
 }
 
-fun parseJSON(file: File): List<String>? {
+fun parseJSON(file: File): ParsedCSpellConfig? {
     val isPackageJSON = file.name == "package.json"
 
     return try {
         if (isPackageJSON) {
             val parseRawJSON = json.decodeFromString<PackageJSONFormat>(file.readText())
-            parseRawJSON.cspell?.words ?: emptyList()
+            val config = parseRawJSON.cspell
+            if (config == null) {
+                ParsedCSpellConfig()
+            } else {
+                ParsedCSpellConfig(config.words, config.dictionaryDefinitions, config.dictionaries)
+            }
         } else {
             val parseRawJSON = json.decodeFromString<CSpellWordsFormat>(file.readText())
-            parseRawJSON.words
+            ParsedCSpellConfig(parseRawJSON.words, parseRawJSON.dictionaryDefinitions, parseRawJSON.dictionaries)
         }
     } catch (e: Exception) {
         logger.debug("Failed to parse JSON from ${file.path}", e)
