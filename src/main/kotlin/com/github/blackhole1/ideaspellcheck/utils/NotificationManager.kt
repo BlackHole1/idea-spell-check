@@ -14,7 +14,6 @@ object NotificationManager {
 
     enum class NotificationKey {
         NODE_JS_CONFIG,
-        NODE_EXECUTABLE_ERROR,
         PROJECT_DIR_ERROR,
         PARSE_ERROR
     }
@@ -39,18 +38,6 @@ object NotificationManager {
                 title = "CSpell Check: Node.js Configuration Required",
                 message = "JavaScript configuration files detected, but Node.js executable path is not configured. Click to configure.",
                 type = NotificationType.WARNING,
-                actionText = "Configure Node.js Path"
-            )
-        }
-    }
-
-    fun showNodeExecutableErrorNotification(project: Project, nodeExecutablePath: String) {
-        showOnce(project, NotificationKey.NODE_EXECUTABLE_ERROR) {
-            showNotificationWithAction(
-                project = project,
-                title = "CSpell Check: Node.js Executable Not Found",
-                message = "Node.js executable not found at configured path: $nodeExecutablePath",
-                type = NotificationType.ERROR,
                 actionText = "Configure Node.js Path"
             )
         }

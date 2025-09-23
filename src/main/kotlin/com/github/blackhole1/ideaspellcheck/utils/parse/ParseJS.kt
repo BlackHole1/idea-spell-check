@@ -1,6 +1,5 @@
 package com.github.blackhole1.ideaspellcheck.utils.parse
 
-import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.github.blackhole1.ideaspellcheck.utils.NotificationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -19,29 +18,27 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
             .redirectError(ProcessBuilder.Redirect.PIPE)
             .start()
 
-        proc.waitFor(5, TimeUnit.SECONDS)
-        proc.inputStream.bufferedReader().readText()
+        val finished = proc.waitFor(5, TimeUnit.SECONDS)
+        if (!finished) {
+            logger.warn("Node.js command did not finish within 5 seconds: ${arguments.joinToString(" ")} in $workingDir")
+            proc.destroyForcibly()
+            proc.waitFor() // Wait for process termination
+            return null
+        }
+
+        val out = proc.inputStream.bufferedReader().readText()
+        val err = proc.errorStream.bufferedReader().readText()
+        if (proc.exitValue() != 0 && err.isNotBlank()) {
+            logger.debug("Node parse stderr output: $err")
+        }
+        out
     } catch (e: IOException) {
         logger.warn("Failed to run Node.js command: ${arguments.joinToString(" ")} in $workingDir", e)
         null
     }
 }
 
-fun parseJS(file: File, project: Project): ParsedCSpellConfig? {
-    val settings = SCProjectSettings.instance(project)
-    val nodeExecutablePath = settings.state.nodeExecutablePath
-
-    if (nodeExecutablePath.isNullOrBlank()) {
-        // Node.js path not configured, return null to indicate unavailable
-        return null
-    }
-
-    val nodeFile = File(nodeExecutablePath)
-    if (!nodeFile.exists() || !nodeFile.canExecute()) {
-        NotificationManager.showNodeExecutableErrorNotification(project, nodeExecutablePath)
-        return null
-    }
-
+fun parseJS(file: File, project: Project, nodeExecutable: String): ParsedCSpellConfig? {
     val cwd = project.guessProjectDir()?.path
     if (cwd == null) {
         NotificationManager.showProjectDirErrorNotification(project)
@@ -95,7 +92,7 @@ fun parseJS(file: File, project: Project): ParsedCSpellConfig? {
                 console.error(error && error.message ? error.message : String(error));
             }
         """.trimIndent()
-        runCommand(nodeExecutablePath, "-e", command, workingDir = File(cwd))?.let {
+        runCommand(nodeExecutable, "-e", command, workingDir = File(cwd))?.let {
             val result = it.trim()
             if (result.isNotEmpty()) {
                 return try {

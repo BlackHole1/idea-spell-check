@@ -22,22 +22,23 @@ private fun getAvailableNodeExecutable(settings: SCProjectSettings): String? {
 }
 
 fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
-    val parsed = when (file.extension) {
+    val ext = file.extension.lowercase()
+    val parsed = when (ext) {
         "json" -> parseJSON(file)
 
         "js", "cjs" -> {
             val settings = SCProjectSettings.instance(project)
             val nodeExecutable = getAvailableNodeExecutable(settings)
-            if (nodeExecutable == null) {
+            if (nodeExecutable == null || nodeExecutable.isBlank()) {
                 NotificationManager.showNodeJsConfigurationNotification(project)
                 return null
             }
-            parseJS(file, project)
+            parseJS(file, project, nodeExecutable)
         }
 
         "yaml", "yml" -> parseYAML(file)
         else -> null
     } ?: return null
 
-    return mergeWordsWithDictionaryDefinitions(parsed.words, parsed.dictionaryDefinitions, parsed.dictionaries, file, project)
+    return mergeWordsWithDictionaryDefinitions(parsed.words, parsed.dictionaryDefinitions, parsed.dictionaries, file)
 }
