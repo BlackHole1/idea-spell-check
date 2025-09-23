@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.util.LinkedHashSet
 
 @Serializable
 data class DictionaryDefinition(
@@ -31,7 +32,6 @@ data class MergedWordList(
 fun readWordsFromDictionaryDefinitions(
     definitions: List<DictionaryDefinition>?,
     configFile: File,
-    project: Project?,
     activeDictionaryNames: Set<String> = emptySet()
 ): DictionaryWordsResult {
     if (definitions.isNullOrEmpty()) {
@@ -65,8 +65,13 @@ fun readWordsFromDictionaryDefinitions(
 
         try {
             val words = normalizedFile.readLines()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
+                .map { it.trim().removePrefix("\uFEFF") }
+                .filter {
+                    it.isNotEmpty() &&
+                    !it.startsWith("#") &&
+                    !it.startsWith("//") &&
+                    !it.startsWith(";")
+                }
             if (words.isNotEmpty()) {
                 result.addAll(words)
             }
@@ -81,39 +86,18 @@ fun readWordsFromDictionaryDefinitions(
 fun mergeWordsWithDictionaryDefinitions(
     baseWords: List<String>,
     definitions: List<DictionaryDefinition>,
-    configFile: File
-): MergedWordList = mergeWordsWithDictionaryDefinitions(baseWords, definitions, emptyList(), configFile, null)
-
-fun mergeWordsWithDictionaryDefinitions(
-    baseWords: List<String>,
-    definitions: List<DictionaryDefinition>,
-    configFile: File,
-    project: Project?
-): MergedWordList = mergeWordsWithDictionaryDefinitions(baseWords, definitions, emptyList(), configFile, project)
-
-fun mergeWordsWithDictionaryDefinitions(
-    baseWords: List<String>,
-    definitions: List<DictionaryDefinition>,
-    activeDictionaryNames: List<String>,
-    configFile: File
-): MergedWordList = mergeWordsWithDictionaryDefinitions(baseWords, definitions, activeDictionaryNames, configFile, null)
-
-fun mergeWordsWithDictionaryDefinitions(
-    baseWords: List<String>,
-    definitions: List<DictionaryDefinition>,
     activeDictionaryNames: List<String>,
     configFile: File,
-    project: Project?
 ): MergedWordList {
     val normalizedActiveNames = activeDictionaryNames
         .mapNotNull { it.trim().takeIf { name -> name.isNotEmpty() } }
         .toSet()
 
-    val fromDefinitions = readWordsFromDictionaryDefinitions(definitions, configFile, project, normalizedActiveNames)
-    val merged = buildList {
+    val fromDefinitions = readWordsFromDictionaryDefinitions(definitions, configFile, normalizedActiveNames)
+    val merged = LinkedHashSet<String>().apply {
         addAll(baseWords)
         addAll(fromDefinitions.words)
-    }
+    }.toList()
     return MergedWordList(merged, fromDefinitions.dictionaryPaths)
 }
 

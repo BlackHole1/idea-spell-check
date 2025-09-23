@@ -195,8 +195,12 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         // Start new debounce timer
         val job = scope.launch {
             delay(debounceDelay)
-            loadConfigFile(file)
-            updateGlobalWordList()
+            try {
+                loadConfigFile(file)
+                updateGlobalWordList()
+            } finally {
+                debounceTimers.remove(filePath, coroutineContext[Job])
+            }
         }
 
         debounceTimers[filePath] = job
@@ -268,7 +272,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
 
         added.forEach { dictionaryPath ->
             val configs = dictionaryFileToConfigs.computeIfAbsent(dictionaryPath) {
-                Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+                Collections.newSetFromMap(ConcurrentHashMap())
             }
             configs.add(configPath)
         }
@@ -285,7 +289,11 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     }
 
     private fun normalizeFilePath(path: String): String {
-        return toSystemIndependentName(File(path).absolutePath)
+        return try {
+            toSystemIndependentName(File(path).canonicalPath)
+        } catch (e: java.io.IOException) {
+            toSystemIndependentName(File(path).absolutePath)
+        }
     }
 
     /**
