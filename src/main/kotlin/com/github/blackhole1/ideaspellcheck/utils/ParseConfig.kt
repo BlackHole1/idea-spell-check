@@ -22,7 +22,7 @@ fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
     val parsed = when (ext) {
         "json", "jsonc" -> parseJSON(file)
 
-        "js", "cjs" -> {
+        "js", "cjs", "mjs" -> {
             val settings = SCProjectSettings.instance(project)
             val nodeExecutable = getAvailableNodeExecutable(settings)
             if (nodeExecutable == null || nodeExecutable.isBlank()) {
