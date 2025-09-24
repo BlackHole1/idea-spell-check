@@ -35,6 +35,8 @@ repositories {
 dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.yamlkt)
+    implementation(libs.ktoml.core)
+    implementation(libs.ktoml.file)
     
     testImplementation(libs.junit)
     testImplementation(libs.opentest4j)
