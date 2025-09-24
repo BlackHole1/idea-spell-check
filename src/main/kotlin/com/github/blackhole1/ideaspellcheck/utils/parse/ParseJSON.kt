@@ -21,6 +21,9 @@ private val logger = Logger.getInstance("CSpell.ParseJSON")
 
 val json = Json {
     ignoreUnknownKeys = true
+    // FIXME: I don't know why there's always an error here in IDEA, but it can compile and run normally.
+    allowComments = true
+    allowTrailingComma = true
 }
 
 fun parseJSON(file: File): ParsedCSpellConfig? {
@@ -40,7 +43,7 @@ fun parseJSON(file: File): ParsedCSpellConfig? {
             ParsedCSpellConfig(parseRawJSON.words, parseRawJSON.dictionaryDefinitions, parseRawJSON.dictionaries)
         }
     } catch (e: Exception) {
-        logger.debug("Failed to parse JSON from ${file.path}", e)
+        logger.warn("Failed to parse JSON from ${file.path}", e)
         null
     }
 

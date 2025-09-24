@@ -29,7 +29,7 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
         val out = proc.inputStream.bufferedReader().readText()
         val err = proc.errorStream.bufferedReader().readText()
         if (proc.exitValue() != 0 && err.isNotBlank()) {
-            logger.debug("Node parse stderr output: $err")
+            logger.warn("Node parse stderr output: $err")
         }
         out
     } catch (e: IOException) {
@@ -99,7 +99,7 @@ fun parseJS(file: File, project: Project, nodeExecutable: String): ParsedCSpellC
                     val config = json.decodeFromString<CSpellWordsFormat>(result)
                     ParsedCSpellConfig(config.words, config.dictionaryDefinitions, config.dictionaries)
                 } catch (e: Exception) {
-                    logger.debug("Failed to decode JS output from ${file.path}", e)
+                    logger.warn("Failed to decode JS output from ${file.path}", e)
                     null
                 }
             }
