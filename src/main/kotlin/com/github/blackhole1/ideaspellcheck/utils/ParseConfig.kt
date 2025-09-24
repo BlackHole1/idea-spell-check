@@ -20,7 +20,7 @@ private fun getAvailableNodeExecutable(settings: SCProjectSettings): String? {
 fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
     val ext = file.extension.lowercase()
     val parsed = when (ext) {
-        "json" -> parseJSON(file)
+        "json", "jsonc" -> parseJSON(file)
 
         "js", "cjs" -> {
             val settings = SCProjectSettings.instance(project)
