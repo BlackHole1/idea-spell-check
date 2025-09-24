@@ -33,6 +33,8 @@ fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
         }
 
         "yaml", "yml" -> parseYAML(file)
+
+        "toml" -> parseTOML(file)
         else -> null
     } ?: return null
 
