@@ -1,8 +1,6 @@
 package com.github.blackhole1.ideaspellcheck.utils.parse
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -31,7 +29,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseJSON(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("alpha", "foo", "bar", "baz"), result.words.toSet())
             assertTrue(result.dictionaryPaths.any { it.endsWith("project-words.txt") })
         } finally {
@@ -62,7 +65,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseJSON(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("gamma", "delta"), result.words.toSet())
         } finally {
             tempDir.deleteRecursively()
@@ -90,7 +98,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseJSON(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("activated"), result.words.toSet())
             assertTrue(result.dictionaryPaths.any { it.endsWith("custom-words.txt") })
         } finally {
@@ -114,7 +127,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseJSON(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("base"), result.words.toSet())
             assertTrue(result.dictionaryPaths.isEmpty())
         } finally {
@@ -143,7 +161,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseYAML(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("zero", "one", "two"), result.words.toSet())
         } finally {
             tempDir.deleteRecursively()
@@ -168,7 +191,12 @@ class DictionaryDefinitionsParseTest {
 
             val parsed = parseJSON(config)
             assertNotNull(parsed)
-            val result = mergeWordsWithDictionaryDefinitions(parsed!!.words, parsed.dictionaryDefinitions, parsed.dictionaries, config)
+            val result = mergeWordsWithDictionaryDefinitions(
+                parsed!!.words,
+                parsed.dictionaryDefinitions,
+                parsed.dictionaries,
+                config
+            )
             assertEquals(setOf("base"), result.words.toSet())
             assertTrue(result.dictionaryPaths.any { it.endsWith("missing.txt") })
         } finally {
