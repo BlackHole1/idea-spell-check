@@ -10,36 +10,68 @@ object CSpellConfigDefinition {
 
     private const val PACKAGE_JSON: String = "package.json"
 
-    data class ConfigFileInfo(
-        val fileName: String,
-        val isVSCodePath: Boolean = false,
-        val priority: Int
-    ) {
+    data class ConfigFileInfo(val fileName: String) {
         fun getFullPath(basePath: String): String {
-            return if (isVSCodePath) {
-                "$basePath${File.separator}.vscode${File.separator}$fileName"
-            } else {
-                "$basePath${File.separator}$fileName"
-            }
+            val normalizedPath = fileName.replace('/', File.separatorChar)
+            return "$basePath${File.separator}$normalizedPath"
         }
     }
 
     private val configFiles = listOf(
-        ConfigFileInfo(".cspell.json", priority = 0),
-        ConfigFileInfo("cspell.json", priority = 1),
-        ConfigFileInfo(".cSpell.json", priority = 2),
-        ConfigFileInfo("cSpell.json", priority = 3),
-        ConfigFileInfo("cspell.config.js", priority = 4),
-        ConfigFileInfo("cspell.config.cjs", priority = 5),
-        ConfigFileInfo("cspell.json", isVSCodePath = true, priority = 6),
-        ConfigFileInfo("cSpell.json", isVSCodePath = true, priority = 7),
-        ConfigFileInfo(".cspell.json", isVSCodePath = true, priority = 8),
-        ConfigFileInfo("cspell.config.json", priority = 9),
-        ConfigFileInfo("cspell.config.yaml", priority = 10),
-        ConfigFileInfo("cspell.config.yml", priority = 11),
-        ConfigFileInfo("cspell.yaml", priority = 12),
-        ConfigFileInfo("cspell.yml", priority = 13),
-        ConfigFileInfo(PACKAGE_JSON, priority = 14)
+        ConfigFileInfo(".cspell.json"),
+        ConfigFileInfo("cspell.json"),
+        ConfigFileInfo(".cSpell.json"),
+        ConfigFileInfo("cSpell.json"),
+        // ConfigFileInfo(".cspell.jsonc"),
+        // ConfigFileInfo("cspell.jsonc"),
+        ConfigFileInfo(".cspell.yaml"),
+        ConfigFileInfo("cspell.yaml"),
+        ConfigFileInfo(".cspell.yml"),
+        ConfigFileInfo("cspell.yml"),
+        ConfigFileInfo(".cspell.config.json"),
+        ConfigFileInfo("cspell.config.json"),
+        // ConfigFileInfo(".cspell.config.jsonc"),
+        // ConfigFileInfo("cspell.config.jsonc"),
+        ConfigFileInfo(".cspell.config.yaml"),
+        ConfigFileInfo("cspell.config.yaml"),
+        ConfigFileInfo(".cspell.config.yml"),
+        ConfigFileInfo("cspell.config.yml"),
+        // ConfigFileInfo(".cspell.config.mjs"),
+        // ConfigFileInfo("cspell.config.mjs"),
+        ConfigFileInfo(".cspell.config.cjs"),
+        ConfigFileInfo("cspell.config.cjs"),
+        ConfigFileInfo(".cspell.config.js"),
+        ConfigFileInfo("cspell.config.js"),
+        // ConfigFileInfo(".cspell.config.toml"),
+        // ConfigFileInfo("cspell.config.toml"),
+        ConfigFileInfo(".config/.cspell.json"),
+        ConfigFileInfo(".config/cspell.json"),
+        ConfigFileInfo(".config/.cSpell.json"),
+        ConfigFileInfo(".config/cSpell.json"),
+        // ConfigFileInfo(".config/.cspell.jsonc"),
+        // ConfigFileInfo(".config/cspell.jsonc"),
+        ConfigFileInfo(".config/cspell.yaml"),
+        ConfigFileInfo(".config/cspell.yml"),
+        ConfigFileInfo(".config/.cspell.config.json"),
+        ConfigFileInfo(".config/cspell.config.json"),
+        // ConfigFileInfo(".config/.cspell.config.jsonc"),
+        // ConfigFileInfo(".config/cspell.config.jsonc"),
+        ConfigFileInfo(".config/.cspell.config.yaml"),
+        ConfigFileInfo(".config/cspell.config.yaml"),
+        ConfigFileInfo(".config/.cspell.config.yml"),
+        ConfigFileInfo(".config/cspell.config.yml"),
+        // ConfigFileInfo(".config/.cspell.config.mjs"),
+        // ConfigFileInfo(".config/cspell.config.mjs"),
+        ConfigFileInfo(".config/.cspell.config.cjs"),
+        ConfigFileInfo(".config/cspell.config.cjs"),
+        ConfigFileInfo(".config/.cspell.config.js"),
+        ConfigFileInfo(".config/cspell.config.js"),
+        // ConfigFileInfo("config/.cspell.config.toml"),
+        // ConfigFileInfo("config/cspell.config.toml"),
+        ConfigFileInfo(".vscode/.cspell.json"),
+        ConfigFileInfo(".vscode/cSpell.json"),
+        ConfigFileInfo(".vscode/cspell.json"),
+        ConfigFileInfo(PACKAGE_JSON)
     )
 
     /**
@@ -55,28 +87,39 @@ object CSpellConfigDefinition {
     fun isConfigFile(file: File): Boolean {
         if (!file.isFile) return false
 
-        val parentDir = file.parent ?: return false
-        val isInVSCode = File(parentDir).name == ".vscode"
-
-        return configFiles.any { config ->
-            config.fileName == file.name && config.isVSCodePath == isInVSCode
-        } || (file.name == PACKAGE_JSON) // package.json is always considered
+        val relativePath = getRelativePath(file)
+        return configFiles.any { it.fileName == relativePath }
     }
 
     /**
      * Get priority of a config file (lower number = higher priority)
      */
     private fun getPriority(file: File): Int {
-        val parentDir = file.parent ?: return Int.MAX_VALUE
-        val isInVSCode = File(parentDir).name == ".vscode"
+        val relativePath = getRelativePath(file)
+        return configFiles.indexOfFirst { it.fileName == relativePath }.takeIf { it >= 0 } ?: Int.MAX_VALUE
+    }
 
-        if (file.name == PACKAGE_JSON) {
-            return configFiles.find { it.fileName == PACKAGE_JSON }?.priority ?: Int.MAX_VALUE
+    /**
+     * Get relative path from file (handles .vscode and .config directories)
+     */
+    private fun getRelativePath(file: File): String {
+        val fileName = file.name
+        val parentDir = file.parentFile ?: return fileName
+
+        return when (parentDir.name) {
+            ".vscode" -> ".vscode/$fileName"
+            ".config" -> ".config/$fileName"
+            "config" -> {
+                // Check if this is config/.cspell.config.toml pattern
+                if (fileName.startsWith(".cspell.config.toml") || fileName == "cspell.config.toml") {
+                    "config/$fileName"
+                } else {
+                    fileName
+                }
+            }
+
+            else -> fileName
         }
-
-        return configFiles.find { config ->
-            config.fileName == file.name && config.isVSCodePath == isInVSCode
-        }?.priority ?: Int.MAX_VALUE
     }
 
     /**

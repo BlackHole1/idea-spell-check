@@ -1,11 +1,7 @@
 package com.github.blackhole1.ideaspellcheck.utils
 
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
-import com.github.blackhole1.ideaspellcheck.utils.parse.MergedWordList
-import com.github.blackhole1.ideaspellcheck.utils.parse.mergeWordsWithDictionaryDefinitions
-import com.github.blackhole1.ideaspellcheck.utils.parse.parseJS
-import com.github.blackhole1.ideaspellcheck.utils.parse.parseJSON
-import com.github.blackhole1.ideaspellcheck.utils.parse.parseYAML
+import com.github.blackhole1.ideaspellcheck.utils.parse.*
 import com.intellij.openapi.project.Project
 import java.io.File
 
@@ -40,5 +36,10 @@ fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
         else -> null
     } ?: return null
 
-    return mergeWordsWithDictionaryDefinitions(parsed.words, parsed.dictionaryDefinitions, parsed.dictionaries, file)
+    return mergeWordsWithDictionaryDefinitions(
+        parsed.words,
+        parsed.dictionaryDefinitions,
+        parsed.dictionaries,
+        file
+    )
 }

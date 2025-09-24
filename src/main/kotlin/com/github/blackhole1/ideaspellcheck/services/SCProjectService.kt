@@ -30,7 +30,8 @@ class SCProjectService(private val project: Project) : Disposable {
                 fileListener = CSpellFileListener(configManager)
 
                 // Register to message bus
-                project.messageBus.connect(this@SCProjectService).subscribe(VirtualFileManager.VFS_CHANGES, fileListener)
+                project.messageBus.connect(this@SCProjectService)
+                    .subscribe(VirtualFileManager.VFS_CHANGES, fileListener)
 
             } catch (e: CancellationException) {
                 throw e

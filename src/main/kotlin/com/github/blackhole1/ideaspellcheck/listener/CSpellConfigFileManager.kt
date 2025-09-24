@@ -12,7 +12,7 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import kotlinx.coroutines.*
 import java.io.File
-import java.util.Collections
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
