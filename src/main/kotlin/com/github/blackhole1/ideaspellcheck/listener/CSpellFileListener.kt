@@ -139,13 +139,11 @@ class CSpellFileListener(
      * Only process files that may contain CSpell configuration
      */
     private fun isConfigFileUnderWatch(filePath: String): Boolean {
-        val fileName = filePath.substringAfterLast('/')
-
-        if (CSpellConfigDefinition.getAllFileNames().contains(fileName)) {
-            return isInWatchedDirectory(filePath)
+        if (!CSpellConfigDefinition.isConfigFilePath(filePath)) {
+            return false
         }
 
-        return false
+        return isInWatchedDirectory(filePath)
     }
 
     /**

@@ -11,10 +11,14 @@ object CSpellConfigDefinition {
     private const val PACKAGE_JSON: String = "package.json"
 
     data class ConfigFileInfo(val fileName: String) {
+        val topDirectory: String? = fileName.substringBefore('/', "").takeIf { fileName.contains('/') }
+
         fun getFullPath(basePath: String): String {
             val normalizedPath = fileName.replace('/', File.separatorChar)
             return "$basePath${File.separator}$normalizedPath"
         }
+
+        fun requiresParentRoot(): Boolean = topDirectory != null
     }
 
     private val configFiles = listOf(
@@ -74,6 +78,10 @@ object CSpellConfigDefinition {
         ConfigFileInfo(PACKAGE_JSON)
     )
 
+    private val configFileMap = configFiles.associateBy { it.fileName }
+    private val nestedConfigDirectories: Set<String> =
+        configFiles.mapNotNull { it.topDirectory }.toSet()
+
     /**
      * Get all possible config file paths for a given directory
      */
@@ -85,28 +93,37 @@ object CSpellConfigDefinition {
      * Check if a file is a CSpell configuration file
      */
     fun isConfigFile(file: File): Boolean {
-        if (!file.isFile) return false
+        if (file.isDirectory) return false
 
-        val relativePath = getRelativePath(file)
-        return configFiles.any { it.fileName == relativePath }
+        val relativePath = computeRelativePath(file)
+        return configFileMap.containsKey(relativePath)
+    }
+
+    /**
+     * Check if a path string represents a CSpell configuration file
+     */
+    fun isConfigFilePath(filePath: String): Boolean {
+        val relativePath = computeRelativePath(filePath) ?: return false
+        return configFileMap.containsKey(relativePath)
     }
 
     /**
      * Get priority of a config file (lower number = higher priority)
      */
     private fun getPriority(file: File): Int {
-        val relativePath = getRelativePath(file)
+        val relativePath = computeRelativePath(file)
         return configFiles.indexOfFirst { it.fileName == relativePath }.takeIf { it >= 0 } ?: Int.MAX_VALUE
     }
 
     /**
      * Get relative path from file (handles .vscode and .config directories)
      */
-    private fun getRelativePath(file: File): String {
-        val fileName = file.name
-        val parentDir = file.parentFile ?: return fileName
+    private fun computeRelativePath(file: File): String {
+        return computeRelativePath(file.name, file.parentFile?.name)
+    }
 
-        return when (parentDir.name) {
+    private fun computeRelativePath(fileName: String, parentName: String?): String {
+        return when (parentName) {
             ".vscode" -> ".vscode/$fileName"
             ".config" -> ".config/$fileName"
             "config" -> {
@@ -125,6 +142,52 @@ object CSpellConfigDefinition {
     /**
      * Compare two files by priority (for sorting)
      */
+    private fun computeRelativePath(filePath: String): String? {
+        val normalizedPath = filePath.replace('\\', '/').trimEnd('/')
+        if (normalizedPath.isEmpty()) return null
+
+        val separatorIndex = normalizedPath.lastIndexOf('/')
+        val fileName: String
+        val parentName: String?
+
+        if (separatorIndex >= 0) {
+            fileName = normalizedPath.substring(separatorIndex + 1)
+            val parentPath = normalizedPath.substring(0, separatorIndex)
+            parentName = parentPath.substringAfterLast('/', parentPath).takeIf { parentPath.isNotEmpty() }
+        } else {
+            fileName = normalizedPath
+            parentName = null
+        }
+
+        return computeRelativePath(fileName, parentName)
+    }
+
+    /**
+     * Return the directory that should act as the search root for the given config file path
+     */
+    fun getSearchRootDirectory(file: File): File? {
+        val parent = file.parentFile ?: return null
+        if (!isConfigFile(file)) return parent
+
+        val relativePath = computeRelativePath(file)
+        val info = configFileMap[relativePath]
+        return if (info?.requiresParentRoot() == true) {
+            parent.parentFile ?: parent
+        } else {
+            parent
+        }
+    }
+
+    /**
+     * Normalize the directory that contains config files so it matches configuration expectations
+     */
+    fun normalizeContainingDirectory(directory: File): File {
+        if (directory.name in nestedConfigDirectories) {
+            directory.parentFile?.let { return it }
+        }
+        return directory
+    }
+
     fun hasHigherPriority(fileA: File, fileB: File): Boolean {
         return getPriority(fileA) < getPriority(fileB)
     }
