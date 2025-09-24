@@ -171,7 +171,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Re-evaluate configuration file priority for the specified path
      */
     private fun reevaluatePriorityForPath(path: String) {
-        val normalized = normalizeSearchRootPath(path) ?: return
+        val normalized = normalizeSearchRootPath(path)
         val newActiveFile = findCSpellConfigFile(normalized)
 
         if (newActiveFile != null) {
@@ -304,17 +304,17 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         return activeConfigFiles[searchRoot]?.absolutePath == file.absolutePath
     }
 
-    private fun normalizeSearchRootPath(path: String): String? {
-        val abs = File(path).absolutePath
-        val f = File(abs)
-        val dir = if (f.name == ".vscode") f.parentFile else f
-        return dir?.let { toSystemIndependentName(it.absolutePath).trimEnd('/') }
+    private fun normalizeSearchRootPath(path: String): String {
+        val directory = CSpellConfigDefinition.normalizeContainingDirectory(File(path).absoluteFile)
+        return toSystemIndependentName(directory.absolutePath).trimEnd('/')
     }
 
     private fun resolveSearchRoot(file: File): String? {
-        val parent = file.parentFile ?: return null
-        return normalizeSearchRootPath(parent.absolutePath)
-            ?.takeIf { getAllWatchPaths().any { root -> it == root || it.startsWith("$root/") } }
+        val baseDir = CSpellConfigDefinition.getSearchRootDirectory(file) ?: file.parentFile ?: return null
+        val normalized = toSystemIndependentName(baseDir.absolutePath).trimEnd('/')
+        return normalized.takeIf { root ->
+            getAllWatchPaths().any { watchRoot -> root == watchRoot || root.startsWith("$watchRoot/") }
+        }
     }
 
     /**
