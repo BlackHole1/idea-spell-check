@@ -2,6 +2,7 @@ package com.github.blackhole1.ideaspellcheck.services
 
 import com.github.blackhole1.ideaspellcheck.listener.CSpellConfigFileManager
 import com.github.blackhole1.ideaspellcheck.listener.CSpellFileListener
+import com.github.blackhole1.ideaspellcheck.utils.NotificationManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -56,5 +57,6 @@ class SCProjectService(private val project: Project) : Disposable {
         // Message bus is connected with this Disposable; framework will handle disconnect.
         // CSpellConfigFileManager is a project service; the platform disposes it.
         scope.cancel()
+        NotificationManager.clear(project)
     }
 }

@@ -55,7 +55,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      */
     private val debounceTimers = ConcurrentHashMap<String, Job>()
 
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scopeJob = SupervisorJob()
+    private val scope = CoroutineScope(scopeJob + Dispatchers.Default)
     private val debounceDelay = 500L
 
     /**
@@ -321,8 +322,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Clean up resources
      */
     override fun dispose() {
+        scope.cancel()
         debounceTimers.values.forEach { it.cancel() }
         debounceTimers.clear()
-        scope.cancel()
     }
 }

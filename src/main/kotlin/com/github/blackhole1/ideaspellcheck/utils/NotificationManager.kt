@@ -31,6 +31,11 @@ object NotificationManager {
         }
     }
 
+    fun clear(project: Project) {
+        val projectKey = project.locationHash
+        shownNotifications.remove(projectKey)
+    }
+
     fun showNodeJsConfigurationNotification(project: Project) {
         showOnce(project, NotificationKey.NODE_JS_CONFIG) {
             showNotificationWithAction(

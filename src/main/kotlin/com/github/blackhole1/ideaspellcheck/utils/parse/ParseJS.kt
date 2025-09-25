@@ -23,11 +23,13 @@ fun runCommand(vararg arguments: String, workingDir: File): String? {
             logger.warn("Node.js command did not finish within 5 seconds: ${arguments.joinToString(" ")} in $workingDir")
             proc.destroyForcibly()
             proc.waitFor() // Wait for process termination
+            proc.inputStream.close()
+            proc.errorStream.close()
             return null
         }
 
-        val out = proc.inputStream.bufferedReader().readText()
-        val err = proc.errorStream.bufferedReader().readText()
+        val out = proc.inputStream.bufferedReader().use { it.readText() }
+        val err = proc.errorStream.bufferedReader().use { it.readText() }
         if (proc.exitValue() != 0 && err.isNotBlank()) {
             logger.warn("Node parse stderr output: $err")
         }
