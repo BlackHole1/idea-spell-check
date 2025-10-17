@@ -10,7 +10,7 @@ ktoml = "0.7.1"
 changelog = "2.4.0"
 intelliJPlatform = "2.10.0"
 kotlin = "2.2.20"
-kover = "0.9.2"
+kover = "0.9.3"
 qodana = "2025.2.1"
 serialization = "2.2.20"
 
