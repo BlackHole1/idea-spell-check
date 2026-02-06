@@ -12,7 +12,7 @@ intelliJPlatform = "2.11.0"
 kotlin = "2.3.0"
 kover = "0.9.5"
 qodana = "2025.3.1"
-serialization = "2.3.0"
+serialization = "2.3.10"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
