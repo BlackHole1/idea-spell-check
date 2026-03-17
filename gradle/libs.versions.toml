@@ -11,7 +11,7 @@ changelog = "2.5.0"
 intelliJPlatform = "2.12.0"
 kotlin = "2.3.20"
 kover = "0.9.7"
-qodana = "2025.3.1"
+qodana = "2025.3.2"
 serialization = "2.3.10"
 
 [libraries]
