@@ -203,4 +203,24 @@ class DictionaryDefinitionsParseTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `dictionary reader trims BOM and skips supported comments`() {
+        val tempDir = Files.createTempDirectory("cspell-dictionary-lines-test").toFile()
+        try {
+            val dictionary = File(tempDir, "words.txt")
+            dictionary.writeText("\uFEFFalpha\n  beta  \n# hash\n // slash\n; semicolon\n\n")
+            val config = File(tempDir, "cspell.json")
+
+            val result = readWordsFromDictionaryDefinitions(
+                listOf(DictionaryDefinition(path = dictionary.name, addWords = true)),
+                config
+            )
+
+            assertEquals(listOf("alpha", "beta"), result.words)
+            assertEquals(setOf(dictionary.absoluteFile.normalize().absolutePath), result.dictionaryPaths)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

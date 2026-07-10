@@ -64,16 +64,11 @@ fun readWordsFromDictionaryDefinitions(
         }
 
         try {
-            val words = normalizedFile.readLines()
-                .map { it.trim().removePrefix("\uFEFF") }
-                .filter {
-                    it.isNotEmpty() &&
-                    !it.startsWith("#") &&
-                    !it.startsWith("//") &&
-                    !it.startsWith(";")
-                }
-            if (words.isNotEmpty()) {
-                result.addAll(words)
+            normalizedFile.useLines { lines ->
+                lines
+                    .map { it.trim().removePrefix("\uFEFF") }
+                    .filter { it.isDictionaryWord() }
+                    .forEach { result.add(it) }
             }
         } catch (_: Exception) {
             // Ignore this dictionary file if reading fails to avoid disrupting the overall process
@@ -111,3 +106,9 @@ private fun resolveDictionaryPath(baseDir: File, path: String): File {
         File(baseDir, path).normalize()
     }
 }
+
+private fun String.isDictionaryWord(): Boolean =
+    isNotEmpty() &&
+    !startsWith("#") &&
+    !startsWith("//") &&
+    !startsWith(";")

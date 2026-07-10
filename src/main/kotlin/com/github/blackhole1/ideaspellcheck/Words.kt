@@ -12,12 +12,12 @@ fun getWords(): MutableSet<String> {
     }
 }
 
-fun replaceWords(w: List<String>, project: Project? = null) {
+fun replaceWords(w: Collection<String>, project: Project? = null) {
     val changed = synchronized(wordsLock) {
-        val newSet = w.toSet()
-        if (words == newSet) false else {
+        val unchanged = if (w is Set<*>) words == w else words == w.toSet()
+        if (unchanged) false else {
             words.clear()
-            words.addAll(newSet)
+            words.addAll(w)
             true
         }
     }

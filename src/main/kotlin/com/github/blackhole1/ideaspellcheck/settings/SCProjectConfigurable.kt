@@ -257,12 +257,13 @@ class SCProjectConfigurable : Configurable {
 
         // Check if custom search paths changed
         val pathsChanged = settings.state.customSearchPaths != settingsComponent.pathsListModel.items
+        val nodePathChanged = settings.state.nodeExecutablePath != nodePathText
 
         settings.setCustomSearchPaths(settingsComponent.pathsListModel.items)
         settings.setNodeExecutablePath(nodePathText)
 
-        // Trigger rescan if paths changed
-        if (pathsChanged) {
+        // Trigger rescan if settings that affect config discovery or parsing changed
+        if (pathsChanged || nodePathChanged) {
             val projectService =
                 project.getServiceIfCreated(com.github.blackhole1.ideaspellcheck.services.SCProjectService::class.java)
             projectService?.rescanAllConfigFiles()
