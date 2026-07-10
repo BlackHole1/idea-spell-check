@@ -9,7 +9,6 @@ plugins {
     alias(libs.plugins.serialization) // Kotlin serialization support
     alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
-    alias(libs.plugins.qodana) // Gradle Qodana Plugin
     id("jacoco") // JaCoCo code coverage
 }
 
