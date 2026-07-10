@@ -10,83 +10,76 @@ object CSpellConfigDefinition {
 
     private const val PACKAGE_JSON: String = "package.json"
 
-    data class ConfigFileInfo(val fileName: String) {
-        val topDirectory: String? = fileName.substringBefore('/', "").takeIf { fileName.contains('/') }
-
-        fun getFullPath(basePath: String): String {
-            val normalizedPath = fileName.replace('/', File.separatorChar)
-            return "$basePath${File.separator}$normalizedPath"
-        }
-
-        fun requiresParentRoot(): Boolean = topDirectory != null
-    }
-
-    private val configFiles = listOf(
-        ConfigFileInfo(".cspell.json"),
-        ConfigFileInfo("cspell.json"),
-        ConfigFileInfo(".cSpell.json"),
-        ConfigFileInfo("cSpell.json"),
-        ConfigFileInfo(".cspell.jsonc"),
-        ConfigFileInfo("cspell.jsonc"),
-        ConfigFileInfo(".cspell.yaml"),
-        ConfigFileInfo("cspell.yaml"),
-        ConfigFileInfo(".cspell.yml"),
-        ConfigFileInfo("cspell.yml"),
-        ConfigFileInfo(".cspell.config.json"),
-        ConfigFileInfo("cspell.config.json"),
-        ConfigFileInfo(".cspell.config.jsonc"),
-        ConfigFileInfo("cspell.config.jsonc"),
-        ConfigFileInfo(".cspell.config.yaml"),
-        ConfigFileInfo("cspell.config.yaml"),
-        ConfigFileInfo(".cspell.config.yml"),
-        ConfigFileInfo("cspell.config.yml"),
-        ConfigFileInfo(".cspell.config.mjs"),
-        ConfigFileInfo("cspell.config.mjs"),
-        ConfigFileInfo(".cspell.config.cjs"),
-        ConfigFileInfo("cspell.config.cjs"),
-        ConfigFileInfo(".cspell.config.js"),
-        ConfigFileInfo("cspell.config.js"),
-        ConfigFileInfo(".cspell.config.toml"),
-        ConfigFileInfo("cspell.config.toml"),
-        ConfigFileInfo(".config/.cspell.json"),
-        ConfigFileInfo(".config/cspell.json"),
-        ConfigFileInfo(".config/.cSpell.json"),
-        ConfigFileInfo(".config/cSpell.json"),
-        ConfigFileInfo(".config/.cspell.jsonc"),
-        ConfigFileInfo(".config/cspell.jsonc"),
-        ConfigFileInfo(".config/cspell.yaml"),
-        ConfigFileInfo(".config/cspell.yml"),
-        ConfigFileInfo(".config/.cspell.config.json"),
-        ConfigFileInfo(".config/cspell.config.json"),
-        ConfigFileInfo(".config/.cspell.config.jsonc"),
-        ConfigFileInfo(".config/cspell.config.jsonc"),
-        ConfigFileInfo(".config/.cspell.config.yaml"),
-        ConfigFileInfo(".config/cspell.config.yaml"),
-        ConfigFileInfo(".config/.cspell.config.yml"),
-        ConfigFileInfo(".config/cspell.config.yml"),
-        ConfigFileInfo(".config/.cspell.config.mjs"),
-        ConfigFileInfo(".config/cspell.config.mjs"),
-        ConfigFileInfo(".config/.cspell.config.cjs"),
-        ConfigFileInfo(".config/cspell.config.cjs"),
-        ConfigFileInfo(".config/.cspell.config.js"),
-        ConfigFileInfo(".config/cspell.config.js"),
-        ConfigFileInfo("config/.cspell.config.toml"),
-        ConfigFileInfo("config/cspell.config.toml"),
-        ConfigFileInfo(".vscode/.cspell.json"),
-        ConfigFileInfo(".vscode/cSpell.json"),
-        ConfigFileInfo(".vscode/cspell.json"),
-        ConfigFileInfo(PACKAGE_JSON)
+    private val configFileNames = listOf(
+        ".cspell.json",
+        "cspell.json",
+        ".cSpell.json",
+        "cSpell.json",
+        ".cspell.jsonc",
+        "cspell.jsonc",
+        ".cspell.yaml",
+        "cspell.yaml",
+        ".cspell.yml",
+        "cspell.yml",
+        ".cspell.config.json",
+        "cspell.config.json",
+        ".cspell.config.jsonc",
+        "cspell.config.jsonc",
+        ".cspell.config.yaml",
+        "cspell.config.yaml",
+        ".cspell.config.yml",
+        "cspell.config.yml",
+        ".cspell.config.mjs",
+        "cspell.config.mjs",
+        ".cspell.config.cjs",
+        "cspell.config.cjs",
+        ".cspell.config.js",
+        "cspell.config.js",
+        ".cspell.config.toml",
+        "cspell.config.toml",
+        ".config/.cspell.json",
+        ".config/cspell.json",
+        ".config/.cSpell.json",
+        ".config/cSpell.json",
+        ".config/.cspell.jsonc",
+        ".config/cspell.jsonc",
+        ".config/cspell.yaml",
+        ".config/cspell.yml",
+        ".config/.cspell.config.json",
+        ".config/cspell.config.json",
+        ".config/.cspell.config.jsonc",
+        ".config/cspell.config.jsonc",
+        ".config/.cspell.config.yaml",
+        ".config/cspell.config.yaml",
+        ".config/.cspell.config.yml",
+        ".config/cspell.config.yml",
+        ".config/.cspell.config.mjs",
+        ".config/cspell.config.mjs",
+        ".config/.cspell.config.cjs",
+        ".config/cspell.config.cjs",
+        ".config/.cspell.config.js",
+        ".config/cspell.config.js",
+        "config/.cspell.config.toml",
+        "config/cspell.config.toml",
+        ".vscode/.cspell.json",
+        ".vscode/cSpell.json",
+        ".vscode/cspell.json",
+        PACKAGE_JSON
     )
 
-    private val configFileMap = configFiles.associateBy { it.fileName }
+    private val configFileNameSet: Set<String> = configFileNames.toSet()
+    private val priorityByFileName: Map<String, Int> =
+        configFileNames.withIndex().associate { (index, fileName) -> fileName to index }
     private val nestedConfigDirectories: Set<String> =
-        configFiles.mapNotNull { it.topDirectory }.toSet()
+        configFileNames.mapNotNull { it.parentDirectoryName() }.toSet()
 
     /**
      * Get all possible config file paths for a given directory
      */
     fun getAllSearchPaths(basePath: String): List<String> {
-        return configFiles.map { it.getFullPath(basePath) }
+        return configFileNames.map { fileName ->
+            "$basePath${File.separator}${fileName.replace('/', File.separatorChar)}"
+        }
     }
 
     /**
@@ -96,7 +89,7 @@ object CSpellConfigDefinition {
         if (file.isDirectory) return false
 
         val relativePath = computeRelativePath(file)
-        return configFileMap.containsKey(relativePath)
+        return relativePath in configFileNameSet
     }
 
     /**
@@ -104,7 +97,7 @@ object CSpellConfigDefinition {
      */
     fun isConfigFilePath(filePath: String): Boolean {
         val relativePath = computeRelativePath(filePath) ?: return false
-        return configFileMap.containsKey(relativePath)
+        return relativePath in configFileNameSet
     }
 
     /**
@@ -112,7 +105,7 @@ object CSpellConfigDefinition {
      */
     private fun getPriority(file: File): Int {
         val relativePath = computeRelativePath(file)
-        return configFiles.indexOfFirst { it.fileName == relativePath }.takeIf { it >= 0 } ?: Int.MAX_VALUE
+        return priorityByFileName[relativePath] ?: Int.MAX_VALUE
     }
 
     /**
@@ -170,8 +163,7 @@ object CSpellConfigDefinition {
         if (!isConfigFile(file)) return parent
 
         val relativePath = computeRelativePath(file)
-        val info = configFileMap[relativePath]
-        return if (info?.requiresParentRoot() == true) {
+        return if (relativePath.parentDirectoryName() != null) {
             parent.parentFile ?: parent
         } else {
             parent
@@ -195,5 +187,8 @@ object CSpellConfigDefinition {
     /**
      * Get all supported config file names (for quick lookup)
      */
-    fun getAllFileNames(): Set<String> = configFiles.map { it.fileName }.toSet()
+    fun getAllFileNames(): Set<String> = configFileNameSet
+
+    private fun String.parentDirectoryName(): String? =
+        substringBefore('/', "").takeIf { contains('/') }
 }

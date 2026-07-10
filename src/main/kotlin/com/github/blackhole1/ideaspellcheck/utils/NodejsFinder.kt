@@ -3,9 +3,10 @@ package com.github.blackhole1.ideaspellcheck.utils
 import java.io.File
 
 object NodejsFinder {
+    private val isWindows = System.getProperty("os.name").contains("windows", ignoreCase = true)
 
     fun findNodejsExecutables(): List<String> {
-        val executableName = if (isWindows()) "node.exe" else "node"
+        val executableName = if (isWindows) "node.exe" else "node"
         val searchPaths = getSearchPaths()
 
         return searchPaths
@@ -24,8 +25,6 @@ object NodejsFinder {
             .toList()
     }
 
-    private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
-
     private fun getSearchPaths(): List<String> {
         val paths = mutableListOf<String>()
 
@@ -33,7 +32,7 @@ object NodejsFinder {
         System.getenv("PATH")?.split(File.pathSeparator)?.let { paths.addAll(it) }
 
         // Common installation paths
-        if (isWindows()) {
+        if (isWindows) {
             paths.addAll(getWindowsPaths())
         } else {
             paths.addAll(getUnixPaths())

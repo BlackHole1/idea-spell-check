@@ -1,6 +1,7 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 plugins {
     id("java") // Java support
@@ -8,8 +9,7 @@ plugins {
     alias(libs.plugins.serialization) // Kotlin serialization support
     alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
-    alias(libs.plugins.qodana) // Gradle Qodana Plugin
-    alias(libs.plugins.kover) // Gradle Kover Plugin
+    id("jacoco") // JaCoCo code coverage
 }
 
 group = providers.gradleProperty("pluginGroup").get()
@@ -123,15 +123,9 @@ changelog {
     repositoryUrl = providers.gradleProperty("pluginRepositoryUrl")
 }
 
-// Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
-kover {
-    reports {
-        total {
-            xml {
-                onCheck = true
-            }
-        }
-    }
+// Configure code coverage using Gradle's built-in JaCoCo integration.
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
 }
 
 tasks {
@@ -141,6 +135,26 @@ tasks {
 
     publishPlugin {
         dependsOn(patchChangelog)
+    }
+
+    test {
+        extensions.configure(JacocoTaskExtension::class) {
+            isIncludeNoLocationClasses = true
+            includes = listOf("com.github.blackhole1.ideaspellcheck.*")
+        }
+    }
+
+    jacocoTestReport {
+        dependsOn(test)
+        reports {
+            xml.required = true
+            html.required = true
+            csv.required = false
+        }
+    }
+
+    check {
+        dependsOn(jacocoTestReport)
     }
 }
 

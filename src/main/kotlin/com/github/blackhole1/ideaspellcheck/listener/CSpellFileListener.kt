@@ -1,7 +1,5 @@
 package com.github.blackhole1.ideaspellcheck.listener
 
-import com.github.blackhole1.ideaspellcheck.utils.CSpellConfigDefinition
-import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.*
@@ -31,48 +29,21 @@ class CSpellFileListener(
      * Handle file creation events
      */
     private fun handleFileCreated(event: VFileCreateEvent) {
-        val filePath = event.path
-
-        if (configManager.isDictionaryFile(filePath)) {
-            configManager.onDictionaryFileChanged(filePath)
-            return
-        }
-
-        if (isConfigFileUnderWatch(filePath)) {
-            configManager.onFileCreated(filePath)
-        }
+        dispatchPath(event.path, configManager::onFileCreated)
     }
 
     /**
      * Handle file content change events
      */
     private fun handleFileChanged(event: VFileContentChangeEvent) {
-        val filePath = event.file.path
-
-        if (configManager.isDictionaryFile(filePath)) {
-            configManager.onDictionaryFileChanged(filePath)
-            return
-        }
-
-        if (isConfigFileUnderWatch(filePath)) {
-            configManager.onFileChanged(filePath)
-        }
+        dispatchPath(event.file.path, configManager::onFileChanged)
     }
 
     /**
      * Handle file deletion events
      */
     private fun handleFileDeleted(event: VFileDeleteEvent) {
-        val filePath = event.file.path
-
-        if (configManager.isDictionaryFile(filePath)) {
-            configManager.onDictionaryFileChanged(filePath)
-            return
-        }
-
-        if (isConfigFileUnderWatch(filePath)) {
-            configManager.onFileDeleted(filePath)
-        }
+        dispatchPath(event.file.path, configManager::onFileDeleted)
     }
 
     /**
@@ -82,19 +53,8 @@ class CSpellFileListener(
         val oldPath = event.oldPath
         val newPath = event.newPath
 
-        // Handle old file deletion
-        if (configManager.isDictionaryFile(oldPath)) {
-            configManager.onDictionaryFileChanged(oldPath)
-        } else if (isConfigFileUnderWatch(oldPath)) {
-            configManager.onFileDeleted(oldPath)
-        }
-
-        // Handle new file creation
-        if (configManager.isDictionaryFile(newPath)) {
-            configManager.onDictionaryFileChanged(newPath)
-        } else if (isConfigFileUnderWatch(newPath)) {
-            configManager.onFileCreated(newPath)
-        }
+        dispatchPath(oldPath, configManager::onFileDeleted)
+        dispatchPath(newPath, configManager::onFileCreated)
     }
 
     /**
@@ -102,15 +62,7 @@ class CSpellFileListener(
      */
     private fun handleFileCopied(event: VFileCopyEvent) {
         val filePath = event.newParent.path + "/" + event.newChildName
-
-        if (configManager.isDictionaryFile(filePath)) {
-            configManager.onDictionaryFileChanged(filePath)
-            return
-        }
-
-        if (isConfigFileUnderWatch(filePath)) {
-            configManager.onFileCreated(filePath)
-        }
+        dispatchPath(filePath, configManager::onFileCreated)
     }
 
     /**
@@ -121,45 +73,18 @@ class CSpellFileListener(
         val parent = event.file.parent ?: return
         val oldPath = parent.path + "/" + (event.oldValue as? String ?: return)
         val newPath = parent.path + "/" + (event.newValue as? String ?: return)
-        if (configManager.isDictionaryFile(oldPath)) {
-            configManager.onDictionaryFileChanged(oldPath)
-        } else if (isConfigFileUnderWatch(oldPath)) {
-            configManager.onFileDeleted(oldPath)
-        }
-
-        if (configManager.isDictionaryFile(newPath)) {
-            configManager.onDictionaryFileChanged(newPath)
-        } else if (isConfigFileUnderWatch(newPath)) {
-            configManager.onFileCreated(newPath)
-        }
+        dispatchPath(oldPath, configManager::onFileDeleted)
+        dispatchPath(newPath, configManager::onFileCreated)
     }
 
-    /**
-     * Check if file path needs attention
-     * Only process files that may contain CSpell configuration
-     */
-    private fun isConfigFileUnderWatch(filePath: String): Boolean {
-        if (!CSpellConfigDefinition.isConfigFilePath(filePath)) {
-            return false
+    private fun dispatchPath(filePath: String, onConfigFile: (String) -> Unit) {
+        if (configManager.isDictionaryFile(filePath)) {
+            configManager.onDictionaryFileChanged(filePath)
+            return
         }
 
-        return isInWatchedDirectory(filePath)
-    }
-
-    /**
-     * Check if file is in a watched directory
-     */
-    private fun isInWatchedDirectory(filePath: String): Boolean {
-        val normalized =
-            toSystemIndependentName(filePath)
-                .trimEnd('/')
-        val watchPaths = configManager.getAllWatchPaths()
-            .map {
-                toSystemIndependentName(it)
-                    .trimEnd('/')
-            }
-        return watchPaths.any { watchPath ->
-            normalized == watchPath || normalized.startsWith("$watchPath/")
+        if (configManager.isConfigFileUnderWatch(filePath)) {
+            onConfigFile(filePath)
         }
     }
 }
