@@ -10,7 +10,7 @@ ktoml = "0.7.1"
 # plugins
 changelog = "2.5.0"
 intelliJPlatform = "2.18.0"
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 serialization = "2.4.0"
 
 [libraries]
