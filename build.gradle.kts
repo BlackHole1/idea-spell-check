@@ -92,7 +92,8 @@ intellijPlatform {
 
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
-            untilBuild = providers.gradleProperty("pluginUntilBuild")
+            // Unset until-build so the plugin is compatible with all future IDE versions
+            untilBuild = provider { null }
         }
     }
 
