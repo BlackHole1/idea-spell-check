@@ -1,6 +1,7 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 
 plugins {
@@ -18,6 +19,14 @@ version = providers.gradleProperty("pluginVersion").get()
 // Set the JVM language level used to build the project.
 kotlin {
     jvmToolchain(21)
+
+    compilerOptions {
+        // The plugin does not bundle its own Kotlin stdlib (see `kotlin.stdlib.default.dependency` in gradle.properties),
+        // so the API level must match the stdlib bundled by the oldest supported IDE (2024.3 ships Kotlin 2.0.21).
+        // Without this, the compiler emits calls to newer stdlib symbols (e.g. `kotlin.coroutines.jvm.internal.SpillingKt`,
+        // API >= 2.2) that do not exist at runtime. Bundled versions: https://plugins.jetbrains.com/docs/intellij/using-kotlin.html
+        apiVersion = KotlinVersion.KOTLIN_2_0
+    }
 }
 
 // Configure project's dependencies
@@ -29,6 +38,15 @@ repositories {
         defaultRepositories()
         localPlatformArtifacts()
     }
+}
+
+// The IntelliJ Platform already ships the Kotlin stdlib, and a plugin must not bundle a second copy.
+// `kotlin.stdlib.default.dependency = false` only drops the implicit dependency; third-party libraries
+// (kotlinx-serialization, yamlkt, ktoml) still pull it in transitively, so keep it out of the plugin distribution.
+configurations.runtimeClasspath {
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk7")
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk8")
 }
 
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
