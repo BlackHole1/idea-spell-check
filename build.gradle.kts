@@ -22,10 +22,10 @@ kotlin {
 
     compilerOptions {
         // The plugin does not bundle its own Kotlin stdlib (see `kotlin.stdlib.default.dependency` in gradle.properties),
-        // so the API level must match the stdlib bundled by the oldest supported IDE (2024.3 ships Kotlin 2.0.21).
+        // so the API level must match the stdlib bundled by the oldest supported IDE (2026.2 ships Kotlin 2.4.0).
         // Without this, the compiler emits calls to newer stdlib symbols (e.g. `kotlin.coroutines.jvm.internal.SpillingKt`,
         // API >= 2.2) that do not exist at runtime. Bundled versions: https://plugins.jetbrains.com/docs/intellij/using-kotlin.html
-        apiVersion = KotlinVersion.KOTLIN_2_0
+        apiVersion = KotlinVersion.KOTLIN_2_4
     }
 }
 

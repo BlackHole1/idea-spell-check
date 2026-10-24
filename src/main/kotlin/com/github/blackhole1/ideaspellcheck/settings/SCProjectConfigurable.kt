@@ -83,7 +83,7 @@ class SCProjectConfigurable : Configurable {
         }
 
         private fun browseForNodeExecutable() {
-            val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
+            val descriptor = FileChooserDescriptorFactory.singleFile()
             descriptor.title = "SELECT NODE.JS EXECUTABLE"
             descriptor.description = "Select the Node.js executable file"
 
@@ -160,7 +160,7 @@ class SCProjectConfigurable : Configurable {
 
             val pathsPanel = ToolbarDecorator.createDecorator(pathsList)
                 .setAddAction { _ ->
-                    val descriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor()
+                    val descriptor = FileChooserDescriptorFactory.singleDir()
                     descriptor.title = "Select Directory"
                     descriptor.description = "Select a directory to search for CSpell configuration files"
                     FileChooser.chooseFile(

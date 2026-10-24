@@ -22,6 +22,6 @@ fun replaceWords(w: Collection<String>, project: Project? = null) {
         }
     }
     if (project != null && changed) {
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart("CSpell words changed")
     }
 }

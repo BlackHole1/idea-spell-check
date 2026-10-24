@@ -10,6 +10,7 @@
     </extensionPoints>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.spellchecker</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCProjectActivity"/>
