@@ -14,8 +14,8 @@ object SCDictionary : Dictionary {
         return "spell-check"
     }
 
-    override fun contains(word: String): Boolean {
-        return this.words.contains(word)
+    override fun lookup(word: String): Dictionary.LookupStatus {
+        return if (this.words.contains(word)) Dictionary.LookupStatus.Present else Dictionary.LookupStatus.Absent
     }
 
     override fun getWords(): MutableSet<String> {
