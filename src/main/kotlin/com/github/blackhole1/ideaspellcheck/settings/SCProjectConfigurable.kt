@@ -2,29 +2,27 @@ package com.github.blackhole1.ideaspellcheck.settings
 
 import com.github.blackhole1.ideaspellcheck.services.SCProjectService
 import com.github.blackhole1.ideaspellcheck.utils.NodejsFinder
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.Configurable
-import com.intellij.openapi.options.ConfigurableProvider
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ToolbarDecorator
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
-import com.intellij.util.ui.JBUI
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import java.awt.Insets
+import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.TopGap
+import com.intellij.ui.dsl.builder.panel
 import java.io.File
-import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JPanel
 
-class SCProjectConfigurable : Configurable {
-    private lateinit var project: Project
-    private lateinit var settingsComponent: SettingsComponent
+class SCProjectConfigurable(private val project: Project) : Configurable {
+    private var settingsComponent: SettingsComponent? = null
 
     companion object {
         /**
@@ -42,35 +40,61 @@ class SCProjectConfigurable : Configurable {
         }
     }
 
-    internal class SettingsComponent(
-        val project: Project,
-        val pathsListModel: CollectionListModel<String> = CollectionListModel<String>(),
-    ) {
-        private val pathsList: JBList<String> = JBList(pathsListModel)
-        val nodeExecutableComboBox: ComboBox<String> = ComboBox<String>()
-        private val browseButton: JButton = JButton("Browse...")
+    internal class SettingsComponent(private val project: Project) {
+        val pathsListModel = CollectionListModel<String>()
+        private val pathsList = JBList(pathsListModel)
+        val nodeExecutableComboBox = ComboBox<String>().apply { isEditable = true }
 
-        val panel: JPanel = createMainPanel()
-
-        init {
-            initializeNodeExecutableComboBox()
-            initializeBrowseButton()
-        }
-
-        private fun initializeNodeExecutableComboBox() {
-            nodeExecutableComboBox.isEditable = true
-
-            // Set reasonable size to prevent excessive expansion
-            nodeExecutableComboBox.preferredSize = java.awt.Dimension(350, nodeExecutableComboBox.preferredSize.height)
-
-            // Load discovered Node.js executables
-            NodejsFinder.findNodejsExecutables().forEach(nodeExecutableComboBox::addItem)
-        }
-
-        private fun initializeBrowseButton() {
-            browseButton.addActionListener {
-                browseForNodeExecutable()
+        val panel: JComponent = panel {
+            row("Node.js executable path:") {
+                cell(nodeExecutableComboBox).align(AlignX.FILL).resizableColumn()
+                button("Browse...") { browseForNodeExecutable() }
             }
+            row {
+                label("Custom search paths:")
+            }.topGap(TopGap.SMALL)
+            row {
+                cell(createPathsPanel()).align(Align.FILL)
+            }.resizableRow()
+        }
+
+        /**
+         * Discover Node.js executables on a background thread (it checks many locations on disk) and add them
+         * to the combo box once found, selecting the first one when no path has been configured yet
+         */
+        fun loadDiscoveredNodeExecutables(isNodePathConfigured: () -> Boolean) {
+            val modality = ModalityState.stateForComponent(panel)
+            ApplicationManager.getApplication().executeOnPooledThread {
+                val discoveredPaths = NodejsFinder.findNodejsExecutables()
+                ApplicationManager.getApplication().invokeLater({
+                    discoveredPaths.forEach(::addPathToComboBoxIfNotExists)
+                    if (nodeExecutablePath() == null && !isNodePathConfigured() && nodeExecutableComboBox.itemCount > 0) {
+                        nodeExecutableComboBox.selectedIndex = 0
+                    }
+                }, modality)
+            }
+        }
+
+        private fun createPathsPanel(): JComponent {
+            return ToolbarDecorator.createDecorator(pathsList)
+                .setAddAction { _ ->
+                    val descriptor = FileChooserDescriptorFactory.singleDir()
+                    descriptor.title = "Select Directory"
+                    descriptor.description = "Select a directory to search for CSpell configuration files"
+                    FileChooser.chooseFile(descriptor, project, null) { file ->
+                        if (!pathsListModel.items.contains(file.path)) {
+                            pathsListModel.add(file.path)
+                        }
+                    }
+                }
+                .setRemoveAction { _ ->
+                    val selectedIndex = pathsList.selectedIndex
+                    if (selectedIndex != -1) {
+                        pathsListModel.remove(selectedIndex)
+                    }
+                }
+                .disableUpDownActions()
+                .createPanel()
         }
 
         private fun browseForNodeExecutable() {
@@ -112,136 +136,47 @@ class SCProjectConfigurable : Configurable {
          */
         fun nodeExecutablePath(): String? =
             (nodeExecutableComboBox.selectedItem as? String)?.trim()?.takeIf { it.isNotEmpty() }
-
-        private fun createMainPanel(): JPanel {
-            val mainPanel = JPanel(GridBagLayout())
-
-            // Node.js executable path section
-            addWithConstraints(
-                mainPanel, JBLabel("Node.js executable path:"),
-                gridx = 0, gridy = 0, anchor = GridBagConstraints.WEST,
-                insets = JBUI.insets(0, 0, 5, 10)
-            )
-
-            addWithConstraints(
-                mainPanel, nodeExecutableComboBox,
-                gridx = 1, gridy = 0, fill = GridBagConstraints.HORIZONTAL,
-                weightx = 0.7, insets = JBUI.insets(0, 0, 5, 5)
-            )
-
-            addWithConstraints(
-                mainPanel, browseButton,
-                gridx = 2, gridy = 0, insets = JBUI.insetsBottom(5)
-            )
-
-
-            // Custom search paths section
-            addWithConstraints(
-                mainPanel, JBLabel("Custom search paths:"),
-                gridx = 0, gridy = 1, anchor = GridBagConstraints.NORTHWEST,
-                insets = JBUI.insets(10, 0, 5, 10)
-            )
-
-            val pathsPanel = ToolbarDecorator.createDecorator(pathsList)
-                .setAddAction { _ ->
-                    val descriptor = FileChooserDescriptorFactory.singleDir()
-                    descriptor.title = "Select Directory"
-                    descriptor.description = "Select a directory to search for CSpell configuration files"
-                    FileChooser.chooseFile(
-                        descriptor,
-                        project,
-                        null,
-                    ) { file ->
-                        if (!pathsListModel.items.contains(file.path)) {
-                            pathsListModel.add(file.path)
-                        }
-                    }
-                }
-                .setRemoveAction { _ ->
-                    val selectedIndex = pathsList.selectedIndex
-                    if (selectedIndex != -1) {
-                        pathsListModel.remove(selectedIndex)
-                    }
-                }
-                .disableUpDownActions()
-                .createPanel()
-
-            addWithConstraints(
-                mainPanel, pathsPanel,
-                gridx = 0, gridy = 2, gridwidth = 3,
-                fill = GridBagConstraints.BOTH, weightx = 1.0, weighty = 1.0
-            )
-
-            return mainPanel
-        }
-
-        private fun addWithConstraints(
-            parent: JPanel,
-            component: JComponent,
-            gridx: Int = 0,
-            gridy: Int = 0,
-            gridwidth: Int = 1,
-            fill: Int = GridBagConstraints.NONE,
-            anchor: Int = GridBagConstraints.CENTER,
-            weightx: Double = 0.0,
-            weighty: Double = 0.0,
-            insets: Insets = JBUI.emptyInsets()
-        ) {
-            val gbc = GridBagConstraints().apply {
-                this.gridx = gridx
-                this.gridy = gridy
-                this.gridwidth = gridwidth
-                this.fill = fill
-                this.anchor = anchor
-                this.weightx = weightx
-                this.weighty = weighty
-                this.insets = insets
-            }
-            parent.add(component, gbc)
-        }
-
-    }
-
-    fun setProject(project: Project) {
-        this.project = project
     }
 
     override fun getDisplayName(): String = "CSpell Check"
 
-    override fun getPreferredFocusedComponent() = settingsComponent.nodeExecutableComboBox
+    override fun getPreferredFocusedComponent() = settingsComponent?.nodeExecutableComboBox
 
     override fun createComponent(): JComponent {
-        settingsComponent = SettingsComponent(project)
-        return settingsComponent.panel
+        val component = SettingsComponent(project)
+        settingsComponent = component
+        component.loadDiscoveredNodeExecutables {
+            !SCProjectSettings.instance(project).state.nodeExecutablePath.isNullOrEmpty()
+        }
+        return component.panel
     }
 
     override fun isModified(): Boolean {
+        val component = settingsComponent ?: return false
         val settings = SCProjectSettings.instance(project)
-        val nodePathText = settingsComponent.nodeExecutablePath()
 
-        return settings.state.customSearchPaths != settingsComponent.pathsListModel.items ||
-                settings.state.nodeExecutablePath != nodePathText
+        return settings.state.customSearchPaths != component.pathsListModel.items ||
+                settings.state.nodeExecutablePath != component.nodeExecutablePath()
     }
 
     override fun apply() {
+        val component = settingsComponent ?: return
         val settings = SCProjectSettings.instance(project)
-        val nodePathText = settingsComponent.nodeExecutablePath()
+        val nodePathText = component.nodeExecutablePath()
 
         // Validate Node.js path before saving
         if (!validateNodeExecutable(nodePathText ?: "")) {
-            Messages.showErrorDialog(
-                project,
+            throw ConfigurationException(
                 "The specified Node.js executable path is invalid. Please select a valid Node.js binary.",
                 "INVALID NODE.JS EXECUTABLE"
             )
-            return
         }
 
         // Check if custom search paths changed
-        val pathsChanged = settings.state.customSearchPaths != settingsComponent.pathsListModel.items
+        val pathsChanged = settings.state.customSearchPaths != component.pathsListModel.items
         val nodePathChanged = settings.state.nodeExecutablePath != nodePathText
 
-        settings.setCustomSearchPaths(settingsComponent.pathsListModel.items)
+        settings.setCustomSearchPaths(component.pathsListModel.items)
         settings.setNodeExecutablePath(nodePathText)
 
         // Trigger rescan if settings that affect config discovery or parsing changed
@@ -251,31 +186,27 @@ class SCProjectConfigurable : Configurable {
     }
 
     override fun reset() {
+        val component = settingsComponent ?: return
         val settings = SCProjectSettings.instance(project)
-        settingsComponent.pathsListModel.replaceAll(settings.state.customSearchPaths)
+        component.pathsListModel.replaceAll(settings.state.customSearchPaths)
 
         // Set saved path in ComboBox
         val savedPath = settings.state.nodeExecutablePath
         if (!savedPath.isNullOrEmpty()) {
             // Add saved path to ComboBox if it's not already there
-            settingsComponent.addPathToComboBoxIfNotExists(savedPath)
-            settingsComponent.nodeExecutableComboBox.selectedItem = savedPath
+            component.addPathToComboBoxIfNotExists(savedPath)
+            component.nodeExecutableComboBox.selectedItem = savedPath
         } else {
-            // Select first item if available, otherwise leave empty
-            if (settingsComponent.nodeExecutableComboBox.itemCount > 0) {
-                settingsComponent.nodeExecutableComboBox.selectedIndex = 0
+            // Select first item if available (discovered paths may still be loading), otherwise leave empty
+            if (component.nodeExecutableComboBox.itemCount > 0) {
+                component.nodeExecutableComboBox.selectedIndex = 0
             } else {
-                settingsComponent.nodeExecutableComboBox.selectedItem = ""
+                component.nodeExecutableComboBox.selectedItem = ""
             }
         }
     }
-}
 
-class SCProjectConfigurableProvider(private val project: Project) : ConfigurableProvider() {
-    override fun createConfigurable(): Configurable {
-        val cfg = SCProjectConfigurable()
-        cfg.setProject(project)
-
-        return cfg
+    override fun disposeUIResources() {
+        settingsComponent = null
     }
 }
