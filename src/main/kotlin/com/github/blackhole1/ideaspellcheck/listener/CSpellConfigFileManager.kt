@@ -1,5 +1,7 @@
 package com.github.blackhole1.ideaspellcheck.listener
 
+import com.github.blackhole1.ideaspellcheck.clearWords
+import com.github.blackhole1.ideaspellcheck.replaceWords
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.github.blackhole1.ideaspellcheck.utils.CSpellConfigDefinition
 import com.github.blackhole1.ideaspellcheck.utils.findCSpellConfigFile
@@ -252,7 +254,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         }
 
         // Update global words with project reference to trigger spell checker update
-        com.github.blackhole1.ideaspellcheck.replaceWords(allWords, project)
+        replaceWords(allWords, project)
     }
 
     fun isDictionaryFile(path: String): Boolean {
@@ -362,6 +364,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         scope.cancel()
         debounceTimers.values.forEach { it.cancel() }
         debounceTimers.clear()
+        clearWords(project)
     }
 }
 
