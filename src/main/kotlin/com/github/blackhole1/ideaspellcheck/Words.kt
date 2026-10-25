@@ -4,6 +4,8 @@ import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
+import com.intellij.util.text.EditDistance
+import kotlin.math.abs
 
 /**
  * Words of each open project (the `null` key holds words replaced without a project).
@@ -23,6 +25,23 @@ private var words: Set<String> = emptySet()
 internal fun containsWord(word: String): Boolean = words.contains(word)
 
 fun getWords(): MutableSet<String> = words.toMutableSet()
+
+/**
+ * Words within a small edit distance of [word], closest first, offered by the spell checker as typo fixes.
+ * Words shorter than 3 characters get no suggestions, as almost any short word would match.
+ */
+internal fun suggestWords(word: String): List<String> {
+    if (word.length < 3) return emptyList()
+    val maxDistance = if (word.length <= 4) 1 else 2
+
+    return words.asSequence()
+        .filter { abs(it.length - word.length) <= maxDistance && !it.equals(word, ignoreCase = true) }
+        .map { it to EditDistance.optimalAlignment(word, it, false, maxDistance) }
+        .filter { (_, distance) -> distance <= maxDistance }
+        .sortedWith(compareBy({ it.second }, { it.first }))
+        .map { it.first }
+        .toList()
+}
 
 /**
  * Replace the words of [project] and re-highlight the projects using the dictionary if its content changed
