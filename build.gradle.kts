@@ -22,8 +22,11 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
-    implementation("com.akuleshov7:ktoml-core:0.7.1")
+    // kotlinx-serialization and kotlinx-datetime are bundled with the IDE and must not be shipped again:
+    // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#other-bundled-kotlin-libraries
+    implementation("com.akuleshov7:ktoml-core:0.7.1") {
+        exclude(group = "org.jetbrains.kotlinx")
+    }
 
     testImplementation("junit:junit:4.13.2")
 
