@@ -42,6 +42,67 @@ fun runCommand(vararg arguments: String, workingDir: File): String {
 }
 
 /**
+ * Node.js script that loads the config file given as its first argument and prints the fields this plugin reads
+ * as JSON. It uses import(), which loads both CommonJS and ES module configs on every supported Node.js version
+ * (require() can only load ES modules since Node.js 22.12). Errors are written to stderr with exit code 1.
+ */
+private val JS_CONFIG_LOADER = """
+    const { pathToFileURL } = require('url');
+    const configPath = process.argv[1];
+
+    // An ES module exposes its default export as `default`, and a CommonJS module compiled from an ES module
+    // (exports.default = ...) is wrapped once more when loaded through import()
+    function unwrapDefault(value) {
+        let config = value;
+        for (let i = 0; i < 2 && config && typeof config === 'object' && 'default' in config; i++) {
+            config = config.default;
+        }
+        return config;
+    }
+
+    function normalize(config) {
+        const words = Array.isArray(config && config.words)
+            ? config.words.filter((value) => typeof value === 'string')
+            : [];
+
+        const dictionaryDefinitions = Array.isArray(config && config.dictionaryDefinitions)
+            ? config.dictionaryDefinitions.map((def) => {
+                if (!def || typeof def !== 'object') {
+                    return {};
+                }
+
+                const normalized = {};
+                if (typeof def.name === 'string') {
+                    normalized.name = def.name;
+                }
+                if (typeof def.path === 'string') {
+                    normalized.path = def.path;
+                }
+                if (typeof def.addWords === 'boolean') {
+                    normalized.addWords = def.addWords;
+                }
+                return normalized;
+            }).filter((entry) => Object.keys(entry).length > 0)
+            : [];
+
+        const dictionaries = Array.isArray(config && config.dictionaries)
+            ? config.dictionaries.filter((value) => typeof value === 'string')
+            : [];
+
+        return { words, dictionaryDefinitions, dictionaries };
+    }
+
+    import(pathToFileURL(configPath).href)
+        .then((module) => {
+            process.stdout.write(JSON.stringify(normalize(unwrapDefault(module))));
+        })
+        .catch((error) => {
+            console.error(error && error.message ? error.message : String(error));
+            process.exitCode = 1;
+        });
+""".trimIndent()
+
+/**
  * Parse a JS config file by loading it with Node.js
  * @return the parsed config, or null if the project directory cannot be determined
  * @throws Exception if Node.js fails to load the config or its output is not a valid config
@@ -53,50 +114,16 @@ fun parseJS(file: File, project: Project, nodeExecutable: String): ParsedCSpellC
         return null
     }
 
+    return loadJsConfig(nodeExecutable, file, File(cwd))
+}
+
+/**
+ * Load a JS config file with Node.js, running it in [workingDir]
+ * @throws Exception if Node.js fails to load the config or its output is not a valid config
+ */
+internal fun loadJsConfig(nodeExecutable: String, file: File, workingDir: File): ParsedCSpellConfig {
     // The config path is passed as an argument (process.argv[1]) instead of being embedded in the script
-    val command = """
-        const configPath = process.argv[1];
-
-        try {
-            const rawConfig = require(configPath);
-            const config = rawConfig && rawConfig.default ? rawConfig.default : rawConfig;
-
-            const words = Array.isArray(config && config.words)
-                ? config.words.filter((value) => typeof value === 'string')
-                : [];
-
-            const dictionaryDefinitions = Array.isArray(config && config.dictionaryDefinitions)
-                ? config.dictionaryDefinitions.map((def) => {
-                    if (!def || typeof def !== 'object') {
-                        return {};
-                    }
-
-                    const normalized = {};
-                    if (typeof def.name === 'string') {
-                        normalized.name = def.name;
-                    }
-                    if (typeof def.path === 'string') {
-                        normalized.path = def.path;
-                    }
-                    if (typeof def.addWords === 'boolean') {
-                        normalized.addWords = def.addWords;
-                    }
-                    return normalized;
-                }).filter((entry) => Object.keys(entry).length > 0)
-                : [];
-
-            const dictionaries = Array.isArray(config && config.dictionaries)
-                ? config.dictionaries.filter((value) => typeof value === 'string')
-                : [];
-
-            const output = { words, dictionaryDefinitions, dictionaries };
-            process.stdout.write(JSON.stringify(output));
-        } catch (error) {
-            console.error(error && error.message ? error.message : String(error));
-            process.exitCode = 1;
-        }
-    """.trimIndent()
-    val output = runCommand(nodeExecutable, "-e", command, file.path, workingDir = File(cwd)).trim()
+    val output = runCommand(nodeExecutable, "-e", JS_CONFIG_LOADER, file.absolutePath, workingDir = workingDir).trim()
     if (output.isEmpty()) return ParsedCSpellConfig()
 
     return json.decodeFromString<CSpellWordsFormat>(output).toParsedConfig()
