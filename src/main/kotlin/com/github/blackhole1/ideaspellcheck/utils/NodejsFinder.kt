@@ -5,11 +5,25 @@ import java.io.File
 object NodejsFinder {
     private val isWindows = System.getProperty("os.name").contains("windows", ignoreCase = true)
 
-    fun findNodejsExecutables(): List<String> {
-        val executableName = if (isWindows) "node.exe" else "node"
-        val searchPaths = getSearchPaths()
+    /**
+     * File name of the Node.js executable on the current OS
+     */
+    val executableName: String = if (isWindows) "node.exe" else "node"
 
-        return searchPaths
+    /**
+     * Check if the given file name is the Node.js executable name on the current OS
+     */
+    fun isNodeExecutableName(fileName: String): Boolean = fileName.lowercase() == executableName
+
+    fun findNodejsExecutables(): List<String> = discoverNodejsExecutables().toList()
+
+    /**
+     * Same as `findNodejsExecutables().firstOrNull()`, but stops at the first match
+     */
+    fun findFirstNodejsExecutable(): String? = discoverNodejsExecutables().firstOrNull()
+
+    private fun discoverNodejsExecutables(): Sequence<String> {
+        return getSearchPaths()
             .asSequence()
             .filter { it.isNotEmpty() }
             .map { path -> File(path, executableName) }
@@ -22,7 +36,6 @@ object NodejsFinder {
                 }
             }
             .distinct()
-            .toList()
     }
 
     private fun getSearchPaths(): List<String> {

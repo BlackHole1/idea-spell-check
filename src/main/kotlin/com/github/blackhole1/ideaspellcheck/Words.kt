@@ -3,21 +3,23 @@ package com.github.blackhole1.ideaspellcheck
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.project.Project
 
-private val words = mutableSetOf<String>()
+/**
+ * Immutable snapshot of the current words. Readers (e.g. dictionary lookups) access it without locking or copying;
+ * writers replace the whole snapshot.
+ */
+@Volatile
+private var words: Set<String> = emptySet()
 private val wordsLock = Any()
 
-fun getWords(): MutableSet<String> {
-    return synchronized(wordsLock) {
-        words.toMutableSet()
-    }
-}
+internal fun containsWord(word: String): Boolean = words.contains(word)
+
+fun getWords(): MutableSet<String> = words.toMutableSet()
 
 fun replaceWords(w: Collection<String>, project: Project? = null) {
     val changed = synchronized(wordsLock) {
-        val unchanged = if (w is Set<*>) words == w else words == w.toSet()
-        if (unchanged) false else {
-            words.clear()
-            words.addAll(w)
+        val newWords = w.toSet()
+        if (words == newWords) false else {
+            words = newWords
             true
         }
     }

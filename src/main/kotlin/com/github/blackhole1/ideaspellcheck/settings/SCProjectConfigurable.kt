@@ -1,5 +1,6 @@
 package com.github.blackhole1.ideaspellcheck.settings
 
+import com.github.blackhole1.ideaspellcheck.services.SCProjectService
 import com.github.blackhole1.ideaspellcheck.utils.NodejsFinder
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
@@ -37,14 +38,7 @@ class SCProjectConfigurable : Configurable {
             if (!file.canExecute()) return false
 
             // Check if it's likely a Node.js executable
-            val fileName = file.name.lowercase()
-            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-
-            return if (isWindows) {
-                fileName == "node.exe"
-            } else {
-                fileName == "node"
-            }
+            return NodejsFinder.isNodeExecutableName(file.name)
         }
     }
 
@@ -70,10 +64,7 @@ class SCProjectConfigurable : Configurable {
             nodeExecutableComboBox.preferredSize = java.awt.Dimension(350, nodeExecutableComboBox.preferredSize.height)
 
             // Load discovered Node.js executables
-            val discoveredPaths = NodejsFinder.findNodejsExecutables()
-            discoveredPaths.forEach { path ->
-                nodeExecutableComboBox.addItem(path)
-            }
+            NodejsFinder.findNodejsExecutables().forEach(nodeExecutableComboBox::addItem)
         }
 
         private fun initializeBrowseButton() {
@@ -88,15 +79,8 @@ class SCProjectConfigurable : Configurable {
             descriptor.description = "Select the Node.js executable file"
 
             // Add file filter for executables
-            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
             descriptor.withFileFilter { file ->
-                if (file.isDirectory) return@withFileFilter false
-                val fileName = file.name.lowercase()
-                if (isWindows) {
-                    fileName == "node.exe"
-                } else {
-                    fileName == "node"
-                }
+                !file.isDirectory && NodejsFinder.isNodeExecutableName(file.name)
             }
 
             FileChooser.chooseFile(descriptor, project, null) { file ->
@@ -117,17 +101,17 @@ class SCProjectConfigurable : Configurable {
         }
 
         fun addPathToComboBoxIfNotExists(path: String) {
-            // Check if path already exists
             val model = nodeExecutableComboBox.model
-            for (i in 0 until model.size) {
-                val item = model.getElementAt(i)
-                if (item == path) {
-                    return // Path already exists
-                }
+            if ((0 until model.size).none { model.getElementAt(it) == path }) {
+                nodeExecutableComboBox.addItem(path)
             }
-            // Add the new path
-            nodeExecutableComboBox.addItem(path)
         }
+
+        /**
+         * Currently entered Node.js path, or null when empty
+         */
+        fun nodeExecutablePath(): String? =
+            (nodeExecutableComboBox.selectedItem as? String)?.trim()?.takeIf { it.isNotEmpty() }
 
         private fun createMainPanel(): JPanel {
             val mainPanel = JPanel(GridBagLayout())
@@ -233,8 +217,7 @@ class SCProjectConfigurable : Configurable {
 
     override fun isModified(): Boolean {
         val settings = SCProjectSettings.instance(project)
-        val nodePathText =
-            (settingsComponent.nodeExecutableComboBox.selectedItem as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        val nodePathText = settingsComponent.nodeExecutablePath()
 
         return settings.state.customSearchPaths != settingsComponent.pathsListModel.items ||
                 settings.state.nodeExecutablePath != nodePathText
@@ -242,8 +225,7 @@ class SCProjectConfigurable : Configurable {
 
     override fun apply() {
         val settings = SCProjectSettings.instance(project)
-        val nodePathText =
-            (settingsComponent.nodeExecutableComboBox.selectedItem as? String)?.trim()?.takeIf { it.isNotEmpty() }
+        val nodePathText = settingsComponent.nodeExecutablePath()
 
         // Validate Node.js path before saving
         if (!validateNodeExecutable(nodePathText ?: "")) {
@@ -264,9 +246,7 @@ class SCProjectConfigurable : Configurable {
 
         // Trigger rescan if settings that affect config discovery or parsing changed
         if (pathsChanged || nodePathChanged) {
-            val projectService =
-                project.getServiceIfCreated(com.github.blackhole1.ideaspellcheck.services.SCProjectService::class.java)
-            projectService?.rescanAllConfigFiles()
+            project.getServiceIfCreated(SCProjectService::class.java)?.rescanAllConfigFiles()
         }
     }
 

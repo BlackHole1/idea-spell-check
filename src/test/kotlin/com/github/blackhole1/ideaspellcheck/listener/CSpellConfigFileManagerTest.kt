@@ -70,4 +70,25 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
             dictionaryParent.deleteRecursively()
         }
     }
+
+    fun testRecognizesDictionaryFilesOnlyAfterTheyAreReferenced() {
+        val customDirectory = Files.createTempDirectory("cspell-dictionary-detection").toFile()
+        try {
+            val dictionary = File(customDirectory, "words.txt").apply { writeText("alpha\n") }
+            val unrelated = File(customDirectory, "other.txt").apply { writeText("beta\n") }
+            assertFalse(manager.isDictionaryFile(dictionary.path))
+
+            File(customDirectory, "cspell.json").writeText(
+                """{ "dictionaryDefinitions": [ { "path": "words.txt", "addWords": true } ] }"""
+            )
+            SCProjectSettings.instance(project).setCustomSearchPaths(listOf(customDirectory.absolutePath))
+            runBlocking { manager.initialize() }
+
+            assertTrue(manager.isDictionaryFile(dictionary.path))
+            assertTrue(manager.isDictionaryFile(dictionary.canonicalPath))
+            assertFalse(manager.isDictionaryFile(unrelated.path))
+        } finally {
+            customDirectory.deleteRecursively()
+        }
+    }
 }

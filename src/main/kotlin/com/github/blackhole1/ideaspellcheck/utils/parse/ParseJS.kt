@@ -98,8 +98,7 @@ fun parseJS(file: File, project: Project, nodeExecutable: String): ParsedCSpellC
             val result = it.trim()
             if (result.isNotEmpty()) {
                 return try {
-                    val config = json.decodeFromString<CSpellWordsFormat>(result)
-                    ParsedCSpellConfig(config.words, config.dictionaryDefinitions, config.dictionaries)
+                    json.decodeFromString<CSpellWordsFormat>(result).toParsedConfig()
                 } catch (e: Exception) {
                     logger.warn("Failed to decode JS output from ${file.path}", e)
                     null

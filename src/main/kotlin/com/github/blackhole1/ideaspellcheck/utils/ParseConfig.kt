@@ -8,13 +8,14 @@ import java.io.File
 private fun getAvailableNodeExecutable(settings: SCProjectSettings): String? {
     // Priority 1: Use user-configured path if valid
     settings.state.nodeExecutablePath?.takeIf { it.isNotBlank() }?.let { configuredPath ->
-        if (File(configuredPath).exists() && File(configuredPath).canExecute()) {
+        val configuredFile = File(configuredPath)
+        if (configuredFile.exists() && configuredFile.canExecute()) {
             return configuredPath
         }
     }
 
     // Priority 2: Use system auto-discovered Node.js
-    return NodejsFinder.findNodejsExecutables().firstOrNull()
+    return NodejsFinder.findFirstNodejsExecutable()
 }
 
 fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
@@ -25,7 +26,7 @@ fun parseCSpellConfig(file: File, project: Project): MergedWordList? {
         "js", "cjs", "mjs" -> {
             val settings = SCProjectSettings.instance(project)
             val nodeExecutable = getAvailableNodeExecutable(settings)
-            if (nodeExecutable == null || nodeExecutable.isBlank()) {
+            if (nodeExecutable.isNullOrBlank()) {
                 NotificationManager.showNodeJsConfigurationNotification(project)
                 return null
             }

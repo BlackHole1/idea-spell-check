@@ -13,6 +13,19 @@ data class DictionaryDefinition(
     val addWords: Boolean? = null
 )
 
+/**
+ * Serializable shape of the CSpell config fields this plugin reads; shared by the JSON, YAML, TOML and JS parsers
+ */
+@Serializable
+data class CSpellWordsFormat(
+    val words: List<String> = emptyList(),
+    val dictionaryDefinitions: List<DictionaryDefinition> = emptyList(),
+    val dictionaries: List<String> = emptyList()
+)
+
+fun CSpellWordsFormat.toParsedConfig(): ParsedCSpellConfig =
+    ParsedCSpellConfig(words, dictionaryDefinitions, dictionaries)
+
 data class ParsedCSpellConfig(
     val words: List<String> = emptyList(),
     val dictionaryDefinitions: List<DictionaryDefinition> = emptyList(),
