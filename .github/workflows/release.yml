@@ -84,9 +84,17 @@ jobs:
 
           # Commit through the GitHub API instead of pushing a local commit, as GitHub signs the commits it
           # creates and the main branch only accepts signed commits
+          # Reset the branch instead when a failed earlier run already created it, so the job can be re-run
           gh api "repos/$GITHUB_REPOSITORY/git/refs" \
             -f ref="refs/heads/$BRANCH" \
-            -f sha="$HEAD_SHA"
+            -f sha="$HEAD_SHA" \
+            || gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" \
+              -f sha="$HEAD_SHA" \
+              -F force=true
+
+          # Pass the content through a file, as a large changelog could exceed the command-line argument limit
+          CHANGELOG_BASE64="$RUNNER_TEMP/changelog.base64"
+          base64 -w0 CHANGELOG.md > "$CHANGELOG_BASE64"
 
           # shellcheck disable=SC2016 # $variables in the query are GraphQL variables
           gh api graphql \
@@ -94,7 +102,7 @@ jobs:
             -f branch="$BRANCH" \
             -f headSha="$HEAD_SHA" \
             -f message="Changelog update - $VERSION" \
-            -f changelog="$(base64 -w0 CHANGELOG.md)" \
+            -F changelog="@$CHANGELOG_BASE64" \
             -f query='
               mutation ($repository: String!, $branch: String!, $headSha: GitObjectID!, $message: String!, $changelog: Base64String!) {
                 createCommitOnBranch(input: {
