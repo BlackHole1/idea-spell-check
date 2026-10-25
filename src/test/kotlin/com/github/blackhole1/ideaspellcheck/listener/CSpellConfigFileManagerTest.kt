@@ -1,6 +1,6 @@
 package com.github.blackhole1.ideaspellcheck.listener
 
-import com.github.blackhole1.ideaspellcheck.replaceWords
+import com.github.blackhole1.ideaspellcheck.clearWords
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -16,7 +16,7 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             SCProjectSettings.instance(project).setCustomSearchPaths(emptyList())
-            replaceWords(emptySet())
+            clearWords(project)
         } finally {
             super.tearDown()
         }
