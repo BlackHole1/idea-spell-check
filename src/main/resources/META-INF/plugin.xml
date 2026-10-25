@@ -11,7 +11,8 @@
         <postStartupActivity implementation="com.github.blackhole1.ideaspellcheck.startup.SCProjectActivity"/>
         <projectConfigurable
                 parentId="tools"
-                provider="com.github.blackhole1.ideaspellcheck.settings.SCProjectConfigurableProvider"
+                id="com.github.blackhole1.ideaspellcheck.settings"
+                instance="com.github.blackhole1.ideaspellcheck.settings.SCProjectConfigurable"
                 displayName="CSpell Check"
         />
         <spellchecker.dictionary.runtimeDictionaryProvider
