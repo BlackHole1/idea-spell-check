@@ -22,20 +22,25 @@ object NodejsFinder {
      */
     fun findFirstNodejsExecutable(): String? = discoverNodejsExecutables().firstOrNull()
 
-    private fun discoverNodejsExecutables(): Sequence<String> {
-        return getSearchPaths()
+    private fun discoverNodejsExecutables(): Sequence<String> = findExecutablesIn(getSearchPaths())
+
+    internal fun findExecutablesIn(searchPaths: List<String>): Sequence<String> {
+        return searchPaths
             .asSequence()
             .filter { it.isNotEmpty() }
-            .map { path -> File(path, executableName) }
+            .map { path -> File(path, executableName).absoluteFile.normalize() }
             .filter { it.exists() && it.canExecute() }
-            .map { file ->
-                try {
-                    file.canonicalPath
-                } catch (_: Exception) {
-                    file.absolutePath
-                }
-            }
-            .distinct()
+            // Return the path as found rather than its symlink target: version managers such as Volta install
+            // `node` as a symlink to a multi-call shim that only behaves as Node.js when invoked by that name.
+            // The target is only used to drop duplicates that point to the same executable.
+            .distinctBy { file -> canonicalPathOrNull(file) ?: file.path }
+            .map { it.path }
+    }
+
+    private fun canonicalPathOrNull(file: File): String? = try {
+        file.canonicalPath
+    } catch (_: Exception) {
+        null
     }
 
     private fun getSearchPaths(): List<String> {
