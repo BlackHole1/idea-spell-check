@@ -1,6 +1,7 @@
 package com.github.blackhole1.ideaspellcheck.listener
 
 import com.github.blackhole1.ideaspellcheck.clearWords
+import com.github.blackhole1.ideaspellcheck.containsWord
 import com.github.blackhole1.ideaspellcheck.settings.SCProjectSettings
 import com.intellij.openapi.util.io.FileUtil.toSystemIndependentName
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -94,6 +95,44 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
             assertFalse(manager.isDictionaryFile(unrelated.path))
         } finally {
             customDirectory.deleteRecursively()
+        }
+    }
+
+    fun testFileEventsUpdateWordsOnlyForSearchRootConfigs() {
+        val root = Files.createTempDirectory("cspell-events").toFile()
+        try {
+            SCProjectSettings.instance(project).setCustomSearchPaths(listOf(root.absolutePath))
+            runBlocking { manager.initialize() }
+
+            val nested = File(root, "packages/app/cspell.json").apply {
+                parentFile.mkdirs()
+                writeText("""{ "words": ["nestedword"] }""")
+            }
+            val config = File(root, "cspell.json").apply { writeText("""{ "words": ["rootword"] }""") }
+            manager.onFileCreated(nested.path)
+            manager.onFileCreated(config.path)
+
+            waitUntil { containsWord("rootword") }
+            assertFalse(containsWord("nestedword"))
+
+            config.writeText("""{ "words": ["changedword"] }""")
+            manager.onFileChanged(config.path)
+            waitUntil { containsWord("changedword") }
+            assertFalse(containsWord("rootword"))
+
+            config.delete()
+            manager.onFileDeleted(config.path)
+            waitUntil { !containsWord("changedword") }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    private fun waitUntil(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!condition()) {
+            assertTrue("Timed out waiting for condition", System.currentTimeMillis() < deadline)
+            Thread.sleep(50)
         }
     }
 }
