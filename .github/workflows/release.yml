@@ -80,13 +80,40 @@ jobs:
           VERSION="${{ github.event.release.tag_name }}"
           BRANCH="changelog-update-$VERSION"
           LABEL="release changelog"
+          HEAD_SHA="$(git rev-parse HEAD)"
 
-          git config user.email "action@github.com"
-          git config user.name "GitHub Action"
+          # Commit through the GitHub API instead of pushing a local commit, as GitHub signs the commits it
+          # creates and the main branch only accepts signed commits
+          # Reset the branch instead when a failed earlier run already created it, so the job can be re-run
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/heads/$BRANCH" \
+            -f sha="$HEAD_SHA" \
+            || gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" \
+              -f sha="$HEAD_SHA" \
+              -F force=true
 
-          git checkout -b $BRANCH
-          git commit -am "Changelog update - $VERSION"
-          git push --set-upstream origin $BRANCH
+          # Pass the content through a file, as a large changelog could exceed the command-line argument limit
+          CHANGELOG_BASE64="$RUNNER_TEMP/changelog.base64"
+          base64 -w0 CHANGELOG.md > "$CHANGELOG_BASE64"
+
+          # shellcheck disable=SC2016 # $variables in the query are GraphQL variables
+          gh api graphql \
+            -f repository="$GITHUB_REPOSITORY" \
+            -f branch="$BRANCH" \
+            -f headSha="$HEAD_SHA" \
+            -f message="Changelog update - $VERSION" \
+            -F changelog="@$CHANGELOG_BASE64" \
+            -f query='
+              mutation ($repository: String!, $branch: String!, $headSha: GitObjectID!, $message: String!, $changelog: Base64String!) {
+                createCommitOnBranch(input: {
+                  branch: { repositoryNameWithOwner: $repository, branchName: $branch }
+                  message: { headline: $message }
+                  expectedHeadOid: $headSha
+                  fileChanges: { additions: [{ path: "CHANGELOG.md", contents: $changelog }] }
+                }) {
+                  commit { url }
+                }
+              }'
 
           gh label create "$LABEL" \
             --description "Pull requests with release changelog update" \
