@@ -30,7 +30,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseJSON(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config
@@ -66,7 +66,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseJSON(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config
@@ -99,7 +99,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseJSON(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config
@@ -128,7 +128,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseJSON(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config
@@ -162,7 +162,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseYAML(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config
@@ -192,7 +192,7 @@ class DictionaryDefinitionsParseTest {
             val parsed = parseJSON(config)
             assertNotNull(parsed)
             val result = mergeWordsWithDictionaryDefinitions(
-                parsed!!.words,
+                parsed.words,
                 parsed.dictionaryDefinitions,
                 parsed.dictionaries,
                 config

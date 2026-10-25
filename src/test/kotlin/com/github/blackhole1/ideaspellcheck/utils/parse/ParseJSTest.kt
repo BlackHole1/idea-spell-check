@@ -28,7 +28,26 @@ class ParseJSTest : BasePlatformTestCase() {
         }
     }
 
-    fun testRunCommandReturnsNullWhenTheProcessCannotStart() {
-        assertNull(runCommand(File("missing-node-executable").absolutePath, "-e", "", workingDir = File(".")))
+    fun testRunCommandFailsWhenTheProcessCannotStart() {
+        try {
+            runCommand(File("missing-node-executable").absolutePath, "-e", "", workingDir = File("."))
+            fail("Expected CommandFailedException")
+        } catch (_: CommandFailedException) {
+        }
+    }
+
+    fun testRunCommandFailsWithStderrOnNonZeroExit() {
+        val node = NodejsFinder.findFirstNodejsExecutable()
+        if (node == null) {
+            println("Skipping ${name}: Node.js is not installed")
+            return
+        }
+
+        try {
+            runCommand(node, "-e", "console.error('broken config'); process.exitCode = 1", workingDir = File("."))
+            fail("Expected CommandFailedException")
+        } catch (e: CommandFailedException) {
+            assertEquals("broken config", e.message)
+        }
     }
 }

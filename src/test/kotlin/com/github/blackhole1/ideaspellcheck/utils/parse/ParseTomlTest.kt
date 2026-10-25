@@ -29,7 +29,6 @@ class ParseTomlTest {
             val parsed = parseTOML(configFile)
 
             assertNotNull("Expected TOML config to parse", parsed)
-            parsed!!
             assertEquals(listOf("alpha", "beta"), parsed.words)
             assertEquals(listOf("custom"), parsed.dictionaries)
             assertEquals(1, parsed.dictionaryDefinitions.size)
@@ -73,7 +72,6 @@ class ParseTomlTest {
 
             val parsed = parseTOML(configFile)
             assertNotNull("Expected TOML config to parse", parsed)
-            parsed!!
 
             val merged = mergeWordsWithDictionaryDefinitions(
                 parsed.words,
