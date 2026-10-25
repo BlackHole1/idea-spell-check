@@ -2,6 +2,7 @@ package com.github.blackhole1.ideaspellcheck.utils
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -59,21 +60,22 @@ class CSpellConfigDefinitionTest {
     }
 
     @Test
-    fun `resolves nested config directories to project root`() {
-        val project = Files.createTempDirectory("cspell-search-root-test").toFile()
-        try {
-            val nestedDirectories = listOf(".config", ".vscode", "config")
-            val configNames = listOf("cspell.json", "cSpell.json", "cspell.config.toml")
+    fun `resolves config file paths to their search root`() {
+        assertEquals("/workspace", CSpellConfigDefinition.getSearchRootPath("/workspace/cspell.json"))
+        assertEquals("/workspace", CSpellConfigDefinition.getSearchRootPath("/workspace/package.json"))
+        assertEquals("/workspace", CSpellConfigDefinition.getSearchRootPath("/workspace/.config/cspell.json"))
+        assertEquals("/workspace", CSpellConfigDefinition.getSearchRootPath("/workspace/.vscode/cSpell.json"))
+        assertEquals("/workspace", CSpellConfigDefinition.getSearchRootPath("/workspace/config/cspell.config.toml"))
+        assertEquals("C:/workspace", CSpellConfigDefinition.getSearchRootPath("C:\\workspace\\cspell.json"))
+        assertEquals("/", CSpellConfigDefinition.getSearchRootPath("/cspell.json"))
+    }
 
-            nestedDirectories.zip(configNames).forEach { (directoryName, fileName) ->
-                val directory = File(project, directoryName).apply { mkdirs() }
-                val config = File(directory, fileName)
-                assertEquals(project, CSpellConfigDefinition.getSearchRootDirectory(config))
-                assertEquals(project, CSpellConfigDefinition.normalizeContainingDirectory(directory))
-            }
-        } finally {
-            project.deleteRecursively()
-        }
+    @Test
+    fun `does not resolve a search root for non config paths`() {
+        assertNull(CSpellConfigDefinition.getSearchRootPath("/workspace/README.md"))
+        assertNull(CSpellConfigDefinition.getSearchRootPath("/workspace/.vscode/cspell.yaml"))
+        assertNull(CSpellConfigDefinition.getSearchRootPath("cspell.json"))
+        assertNull(CSpellConfigDefinition.getSearchRootPath(""))
     }
 
     @Test

@@ -57,9 +57,9 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     @Volatile
     private var dictionaryFileNames: Set<String> = emptySet()
 
-    private val watchPathsLock = Any()
+    private val searchRootsLock = Any()
     @Volatile
-    private var cachedWatchPaths: List<String>? = null
+    private var cachedSearchRoots: Set<String>? = null
 
     /**
      * Debounce timer management
@@ -73,42 +73,36 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     private val debounceDelay = 500L
 
     /**
-     * Get all watched paths
+     * Get the directories searched for config files: the project root and the custom search paths.
+     * Only config files located directly in one of them (or in its .config/.vscode/config subdirectory) are used,
+     * both when scanning and when handling file events.
      */
-    fun getAllWatchPaths(): List<String> {
-        cachedWatchPaths?.let { return it }
+    fun getConfigSearchRoots(): Set<String> {
+        cachedSearchRoots?.let { return it }
 
-        return synchronized(watchPathsLock) {
-            cachedWatchPaths ?: buildWatchPaths().also { cachedWatchPaths = it }
+        return synchronized(searchRootsLock) {
+            cachedSearchRoots ?: buildSearchRoots().also { cachedSearchRoots = it }
         }
     }
 
-    private fun buildWatchPaths(): List<String> {
-        val paths = mutableSetOf<String>()
+    private fun buildSearchRoots(): Set<String> {
+        val paths = linkedSetOf<String>()
 
         // Add project root directory
         project.guessProjectDir()?.path?.let { rootPath ->
             val file = File(rootPath)
             if (file.isDirectory) {
-                paths.add(normalizeWatchPath(file.absolutePath))
+                paths.add(normalizeSearchRoot(file.absolutePath))
             }
         }
 
         // Add custom search paths
         val settings = SCProjectSettings.instance(project)
         settings.state.customSearchPaths.filter { it.isNotBlank() }.forEach { path ->
-            paths.add(normalizeWatchPath(File(path).absolutePath))
+            paths.add(normalizeSearchRoot(File(path).absolutePath))
         }
 
-        // Add directories containing dictionary files
-        dictionaryFileToConfigs.keys.forEach { dictionaryPath ->
-            val parent = File(dictionaryPath).parentFile
-            if (parent != null) {
-                paths.add(normalizeWatchPath(parent.absolutePath))
-            }
-        }
-
-        return paths.toList()
+        return paths
     }
 
     /**
@@ -121,10 +115,9 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         dictionaryFileToConfigs.clear()
         configFileDictionaryNames.clear()
         refreshDictionaryFileNames()
-        invalidateWatchPaths()
-        val allPaths = getAllWatchPaths()
+        invalidateSearchRoots()
 
-        for (path in allPaths) {
+        for (path in getConfigSearchRoots()) {
             val configFile = findCSpellConfigFile(path)
             if (configFile != null) {
                 activeConfigFiles[path] = ActiveConfigFile(configFile)
@@ -142,7 +135,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         val file = File(filePath)
         if (!CSpellConfigDefinition.isConfigFile(file)) return
 
-        val searchRoot = resolveSearchRoot(file) ?: return
+        val searchRoot = resolveSearchRoot(file.absolutePath) ?: return
         val currentActiveFile = activeConfigFiles[searchRoot]
 
         // Check if the new file has higher priority
@@ -163,7 +156,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
             debounceParseFile(file)
         } else if (file.name == "package.json") {
             // package.json may have added or removed cspell field, need to re-evaluate
-            resolveSearchRoot(file)?.let { reevaluatePriorityForPath(it) }
+            resolveSearchRoot(file.absolutePath)?.let { reevaluatePriorityForPath(it) }
         }
     }
 
@@ -172,7 +165,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      */
     fun onFileDeleted(filePath: String) {
         val file = File(filePath)
-        val searchRoot = resolveSearchRoot(file) ?: return
+        val searchRoot = resolveSearchRoot(file.absolutePath) ?: return
         val configPath = normalizeFilePath(file.absolutePath)
 
         // Remove from word mapping
@@ -193,15 +186,14 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     /**
      * Re-evaluate configuration file priority for the specified path
      */
-    private fun reevaluatePriorityForPath(path: String) {
-        val normalized = normalizeSearchRootPath(path)
-        val newActiveFile = findCSpellConfigFile(normalized)
+    private fun reevaluatePriorityForPath(searchRoot: String) {
+        val newActiveFile = findCSpellConfigFile(searchRoot)
 
         if (newActiveFile != null) {
-            activeConfigFiles[normalized] = ActiveConfigFile(newActiveFile)
+            activeConfigFiles[searchRoot] = ActiveConfigFile(newActiveFile)
             debounceParseFile(newActiveFile)
         } else {
-            activeConfigFiles.remove(normalized)
+            activeConfigFiles.remove(searchRoot)
             updateGlobalWordList()
         }
     }
@@ -272,16 +264,11 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         return dictionaryFileToConfigs.containsKey(normalized)
     }
 
-    fun isConfigFileUnderWatch(path: String): Boolean {
-        if (!CSpellConfigDefinition.isConfigFilePath(path)) {
-            return false
-        }
-
-        val normalized = normalizeWatchPath(path)
-        return getAllWatchPaths().any { watchRoot ->
-            isPathUnderWatchRoot(normalized, watchRoot)
-        }
-    }
+    /**
+     * Check if the path is a config file belonging to one of the search roots. Only inspects the path string,
+     * since it is called for every VFS event.
+     */
+    fun isSearchRootConfigFile(path: String): Boolean = resolveSearchRoot(path) != null
 
     fun onDictionaryFileChanged(path: String) {
         val normalized = normalizeFilePath(path)
@@ -312,10 +299,6 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
             }
             configs.add(configPath)
         }
-
-        if (removed.isNotEmpty() || added.isNotEmpty()) {
-            invalidateWatchPaths()
-        }
     }
 
     private fun removeDictionaryMappings(configPath: String) {
@@ -326,9 +309,6 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
                 configs?.remove(configPath)
                 if (configs != null && configs.isEmpty()) null else configs
             }
-        }
-        if (previous.isNotEmpty()) {
-            invalidateWatchPaths()
         }
     }
 
@@ -353,30 +333,25 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Check if file is the currently active configuration file
      */
     private fun isActiveConfigFile(file: File): Boolean {
-        val searchRoot = resolveSearchRoot(file) ?: return false
+        val searchRoot = resolveSearchRoot(file.absolutePath) ?: return false
         val filePath = normalizeFilePath(file.absolutePath)
         return activeConfigFiles[searchRoot]?.path == filePath
     }
 
-    private fun normalizeSearchRootPath(path: String): String {
-        val directory = CSpellConfigDefinition.normalizeContainingDirectory(File(path).absoluteFile)
-        return normalizeWatchPath(directory.absolutePath)
+    /**
+     * Return the search root a config file path belongs to, or null if it is not a config file of any search root
+     */
+    private fun resolveSearchRoot(filePath: String): String? {
+        val root = CSpellConfigDefinition.getSearchRootPath(filePath) ?: return null
+        return normalizeSearchRoot(root).takeIf { it in getConfigSearchRoots() }
     }
 
-    private fun resolveSearchRoot(file: File): String? {
-        val baseDir = CSpellConfigDefinition.getSearchRootDirectory(file) ?: file.parentFile ?: return null
-        val normalized = normalizeWatchPath(baseDir.absolutePath)
-        return normalized.takeIf { root ->
-            getAllWatchPaths().any { watchRoot -> isPathUnderWatchRoot(root, watchRoot) }
-        }
-    }
-
-    private fun normalizeWatchPath(path: String): String =
+    private fun normalizeSearchRoot(path: String): String =
         toSystemIndependentName(path).trimEnd('/').ifEmpty { "/" }
 
-    private fun invalidateWatchPaths() {
-        synchronized(watchPathsLock) {
-            cachedWatchPaths = null
+    private fun invalidateSearchRoots() {
+        synchronized(searchRootsLock) {
+            cachedSearchRoots = null
         }
     }
 
@@ -407,7 +382,3 @@ private fun normalizeFilePath(path: String): String {
 
 private fun fileNameOf(path: String): String =
     toSystemIndependentName(path).trimEnd('/').substringAfterLast('/')
-
-internal fun isPathUnderWatchRoot(path: String, watchRoot: String): Boolean =
-    path == watchRoot ||
-        if (watchRoot == "/") path.startsWith('/') else path.startsWith("$watchRoot/")

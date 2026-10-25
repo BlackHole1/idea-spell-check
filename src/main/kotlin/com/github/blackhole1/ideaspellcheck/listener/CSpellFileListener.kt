@@ -83,7 +83,7 @@ class CSpellFileListener(
             return
         }
 
-        if (configManager.isConfigFileUnderWatch(filePath)) {
+        if (configManager.isSearchRootConfigFile(filePath)) {
             onConfigFile(filePath)
         }
     }
