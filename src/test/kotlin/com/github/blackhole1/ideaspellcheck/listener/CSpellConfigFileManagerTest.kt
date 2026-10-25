@@ -22,7 +22,7 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
         }
     }
 
-    fun testRecognizesConfigOnlyInsideProjectWatchRoot() {
+    fun testRecognizesConfigOnlyAtSearchRoots() {
         val watchedParent = Files.createTempDirectory("cspell-watch-root-parent").toFile()
         val watchedDirectory = File(watchedParent, "created-later")
         val outsideDirectory = Files.createTempDirectory("cspell-outside-watch-root").toFile()
@@ -31,15 +31,21 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
             runBlocking { manager.initialize() }
             assertTrue(watchedDirectory.mkdirs())
 
-            assertTrue(manager.isConfigFileUnderWatch(File(watchedDirectory, "cspell.json").path))
-            assertFalse(manager.isConfigFileUnderWatch(File(outsideDirectory, "cspell.json").path))
+            assertTrue(manager.isSearchRootConfigFile(File(watchedDirectory, "cspell.json").path))
+            assertTrue(manager.isSearchRootConfigFile(File(watchedDirectory, ".vscode/cspell.json").path))
+            assertTrue(manager.isSearchRootConfigFile(File(watchedDirectory, "package.json").path))
+            assertFalse(manager.isSearchRootConfigFile(File(watchedDirectory, "README.md").path))
+            // Nested configs are ignored by the initial scan, so file events must ignore them as well
+            assertFalse(manager.isSearchRootConfigFile(File(watchedDirectory, "packages/app/cspell.json").path))
+            assertFalse(manager.isSearchRootConfigFile(File(watchedDirectory, "node_modules/foo/package.json").path))
+            assertFalse(manager.isSearchRootConfigFile(File(outsideDirectory, "cspell.json").path))
         } finally {
             watchedParent.deleteRecursively()
             outsideDirectory.deleteRecursively()
         }
     }
 
-    fun testInitializeRefreshesCustomAndDictionaryWatchPaths() {
+    fun testInitializeRefreshesSearchRootsAndDictionaries() {
         val customDirectory = Files.createTempDirectory("cspell-custom-watch-root").toFile()
         val dictionaryParent = Files.createTempDirectory("cspell-dictionary-watch-root-parent").toFile()
         val dictionaryDirectory = File(dictionaryParent, "created-later")
@@ -56,15 +62,14 @@ class CSpellConfigFileManagerTest : BasePlatformTestCase() {
             )
 
             val customPath = toSystemIndependentName(customDirectory.absolutePath)
-            val dictionaryPath = toSystemIndependentName(dictionaryDirectory.canonicalPath)
-            assertFalse(manager.getAllWatchPaths().contains(customPath))
+            assertFalse(manager.getConfigSearchRoots().contains(customPath))
 
             SCProjectSettings.instance(project).setCustomSearchPaths(listOf(customDirectory.absolutePath))
             runBlocking { manager.initialize() }
 
-            val watchPaths = manager.getAllWatchPaths()
-            assertTrue("Expected custom path in $watchPaths", watchPaths.contains(customPath))
-            assertTrue("Expected dictionary path in $watchPaths", watchPaths.contains(dictionaryPath))
+            val searchRoots = manager.getConfigSearchRoots()
+            assertTrue("Expected custom path in $searchRoots", searchRoots.contains(customPath))
+            assertTrue(manager.isDictionaryFile(missingDictionary.path))
         } finally {
             customDirectory.deleteRecursively()
             dictionaryParent.deleteRecursively()

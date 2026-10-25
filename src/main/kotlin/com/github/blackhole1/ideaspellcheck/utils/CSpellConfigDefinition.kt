@@ -70,8 +70,6 @@ object CSpellConfigDefinition {
     private val configFileNameSet: Set<String> = configFileNames.toSet()
     private val priorityByFileName: Map<String, Int> =
         configFileNames.withIndex().associate { (index, fileName) -> fileName to index }
-    private val nestedConfigDirectories: Set<String> =
-        configFileNames.mapNotNull { it.parentDirectoryName() }.toSet()
 
     /**
      * Get all possible config file paths for a given directory
@@ -133,7 +131,7 @@ object CSpellConfigDefinition {
     }
 
     /**
-     * Compare two files by priority (for sorting)
+     * Get relative path from a path string (handles .vscode and .config directories)
      */
     private fun computeRelativePath(filePath: String): String? {
         val normalizedPath = filePath.replace('\\', '/').trimEnd('/')
@@ -156,28 +154,16 @@ object CSpellConfigDefinition {
     }
 
     /**
-     * Return the directory that should act as the search root for the given config file path
+     * Return the search root directory (system-independent) of a config file path, e.g. `/project` for both
+     * `/project/cspell.json` and `/project/.vscode/cspell.json`, or null if the path is not a config file.
+     * This only inspects the path string, so it does no I/O and also works for deleted files.
      */
-    fun getSearchRootDirectory(file: File): File? {
-        val parent = file.parentFile ?: return null
-        if (!isConfigFile(file)) return parent
+    fun getSearchRootPath(filePath: String): String? {
+        val normalizedPath = filePath.replace('\\', '/').trimEnd('/')
+        val relativePath = computeRelativePath(normalizedPath) ?: return null
+        if (relativePath !in configFileNameSet || normalizedPath == relativePath) return null
 
-        val relativePath = computeRelativePath(file)
-        return if (relativePath.parentDirectoryName() != null) {
-            parent.parentFile ?: parent
-        } else {
-            parent
-        }
-    }
-
-    /**
-     * Normalize the directory that contains config files so it matches configuration expectations
-     */
-    fun normalizeContainingDirectory(directory: File): File {
-        if (directory.name in nestedConfigDirectories) {
-            directory.parentFile?.let { return it }
-        }
-        return directory
+        return normalizedPath.removeSuffix(relativePath).trimEnd('/').ifEmpty { "/" }
     }
 
     fun hasHigherPriority(fileA: File, fileB: File): Boolean {
@@ -188,7 +174,4 @@ object CSpellConfigDefinition {
      * Get all supported config file names (for quick lookup)
      */
     fun getAllFileNames(): Set<String> = configFileNameSet
-
-    private fun String.parentDirectoryName(): String? =
-        substringBefore('/', "").takeIf { contains('/') }
 }
