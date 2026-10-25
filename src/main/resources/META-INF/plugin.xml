@@ -4,11 +4,6 @@
     <name>CSpell Check</name>
     <vendor>Black-Hole</vendor>
 
-    <extensionPoints>
-        <extensionPoint name="spellchecker.dictionary.runtimeDictionaryProvider"
-                        interface="com.intellij.spellchecker.dictionary.RuntimeDictionaryProvider" dynamic="true"/>
-    </extensionPoints>
-
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.spellchecker</depends>
 
