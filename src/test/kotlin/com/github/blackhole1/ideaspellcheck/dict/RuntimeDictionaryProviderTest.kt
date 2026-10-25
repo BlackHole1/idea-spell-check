@@ -32,4 +32,26 @@ class RuntimeDictionaryProviderTest : BasePlatformTestCase() {
 
         assertFalse(spellChecker.hasProblem(word))
     }
+
+    fun testDictionarySuggestsCloseProjectWords() {
+        replaceWords(listOf("kubernetes", "kustomize", "helm", "argo"), project)
+
+        val suggestions = mutableListOf<String>()
+        SCDictionary.consumeSuggestions("kubernets") { suggestions.add(it) }
+        assertEquals(listOf("kubernetes"), suggestions)
+
+        suggestions.clear()
+        SCDictionary.consumeSuggestions("hlem") { suggestions.add(it) }
+        assertEquals(listOf("helm"), suggestions)
+
+        suggestions.clear()
+        SCDictionary.consumeSuggestions("kubernetes") { suggestions.add(it) }
+        assertEquals(emptyList<String>(), suggestions)
+    }
+
+    fun testSpellCheckerOffersProjectWordsAsTypoFixes() {
+        replaceWords(listOf("zqxjkvword"), project)
+
+        assertContainsElements(SpellCheckerManager.getInstance(project).getSuggestions("zqxjkvwrd"), "zqxjkvword")
+    }
 }
