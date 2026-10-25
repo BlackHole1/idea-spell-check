@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import java.util.concurrent.ConcurrentHashMap
 
 object NotificationManager {
@@ -14,12 +15,14 @@ object NotificationManager {
 
     enum class NotificationKey {
         NODE_JS_CONFIG,
-        PROJECT_DIR_ERROR,
-        PARSE_ERROR
+        PROJECT_DIR_ERROR
     }
 
     // Project-scoped, thread-safe notification tracking
     private val shownNotifications = ConcurrentHashMap<String, MutableSet<NotificationKey>>()
+
+    // Config files whose parse error has been reported, per project (path set is cleared when the file parses again)
+    private val failedConfigFiles = ConcurrentHashMap<String, MutableSet<String>>()
 
     private fun showOnce(project: Project, key: NotificationKey, action: () -> Unit) {
         val projectKey = project.locationHash
@@ -34,6 +37,7 @@ object NotificationManager {
     fun clear(project: Project) {
         val projectKey = project.locationHash
         shownNotifications.remove(projectKey)
+        failedConfigFiles.remove(projectKey)
     }
 
     fun showNodeJsConfigurationNotification(project: Project) {
@@ -59,15 +63,25 @@ object NotificationManager {
         }
     }
 
+    /**
+     * Report a config file that failed to parse. Repeated failures of the same file are reported once, until
+     * [clearParseError] is called after the file parses successfully.
+     */
     fun showParseErrorNotification(project: Project, filePath: String, errorMessage: String?) {
-        showOnce(project, NotificationKey.PARSE_ERROR) {
-            showNotification(
-                project,
-                "CSpell Check: JavaScript Parsing Error",
-                "Error parsing JS file $filePath: ${errorMessage ?: "Unknown error"}",
-                NotificationType.ERROR
-            )
-        }
+        val failedFiles = failedConfigFiles.computeIfAbsent(project.locationHash) { ConcurrentHashMap.newKeySet() }
+        if (!failedFiles.add(filePath)) return
+
+        val reason = StringUtil.escapeXmlEntities(errorMessage?.takeIf { it.isNotBlank() } ?: "Unknown error")
+        showNotification(
+            project,
+            "CSpell Check: Configuration Parsing Error",
+            "Failed to parse ${StringUtil.escapeXmlEntities(filePath)}: $reason",
+            NotificationType.ERROR
+        )
+    }
+
+    fun clearParseError(project: Project, filePath: String) {
+        failedConfigFiles[project.locationHash]?.remove(filePath)
     }
 
     private fun showNotificationWithAction(

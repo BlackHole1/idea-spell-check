@@ -3,11 +3,8 @@ package com.github.blackhole1.ideaspellcheck.utils.parse
 import com.akuleshov7.ktoml.Toml
 import com.akuleshov7.ktoml.TomlInputConfig
 import com.akuleshov7.ktoml.TomlOutputConfig
-import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.modules.EmptySerializersModule
 import java.io.File
-
-private val logger = Logger.getInstance("CSpell.ParseTOML")
 
 private val toml = Toml(
     TomlInputConfig(ignoreUnknownNames = true),
@@ -15,11 +12,9 @@ private val toml = Toml(
     EmptySerializersModule()
 )
 
-fun parseTOML(file: File): ParsedCSpellConfig? {
-    return try {
-        toml.decodeFromString(CSpellWordsFormat.serializer(), file.readText()).toParsedConfig()
-    } catch (e: Exception) {
-        logger.warn("Failed to parse TOML from ${file.path}", e)
-        null
-    }
-}
+/**
+ * Parse a TOML config file
+ * @throws Exception if the file cannot be read or is not a valid config
+ */
+fun parseTOML(file: File): ParsedCSpellConfig =
+    toml.decodeFromString(CSpellWordsFormat.serializer(), file.readText()).toParsedConfig()
