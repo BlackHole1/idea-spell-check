@@ -25,7 +25,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     implementation("net.mamoe.yamlkt:yamlkt-jvm:0.13.0")
     implementation("com.akuleshov7:ktoml-core:0.7.1")
-    implementation("com.akuleshov7:ktoml-file:0.7.1")
 
     testImplementation("junit:junit:4.13.2")
 
