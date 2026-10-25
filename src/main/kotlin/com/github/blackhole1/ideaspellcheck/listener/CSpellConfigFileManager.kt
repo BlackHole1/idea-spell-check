@@ -19,10 +19,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Configuration file priority manager
- * Manages the currently active configuration files and their corresponding words for each search path
+ * Manages the currently active configuration files and their corresponding words for each search path.
+ *
+ * All state changes (scans, file events, debounced parses) run one at a time on [stateDispatcher], so a rescan
+ * cannot interleave with an in-flight parse and file events are handled off the EDT in the order they arrive.
  */
 @Service(Service.Level.PROJECT)
-class CSpellConfigFileManager(private val project: Project) : Disposable {
+class CSpellConfigFileManager(
+    private val project: Project,
+    private val scope: CoroutineScope,
+) : Disposable {
 
     private val logger = Logger.getInstance(CSpellConfigFileManager::class.java)
 
@@ -70,8 +76,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      */
     private val debounceTimers = ConcurrentHashMap<String, Job>()
 
-    private val scopeJob = SupervisorJob()
-    private val scope = CoroutineScope(scopeJob + Dispatchers.Default)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val stateDispatcher = Dispatchers.IO.limitedParallelism(1)
     private val debounceDelay = 500L
 
     /**
@@ -110,7 +116,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     /**
      * Initialize: scan all paths and set initial active configuration files
      */
-    suspend fun initialize() = withContext(Dispatchers.IO) {
+    suspend fun initialize() = withContext(stateDispatcher) {
         activeConfigFiles.clear()
         configFileWords.clear()
         configFileDictionaryPaths.clear()
@@ -133,7 +139,28 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     /**
      * Handle file creation events
      */
-    fun onFileCreated(filePath: String) {
+    fun onFileCreated(filePath: String) = updateState { handleFileCreated(filePath) }
+
+    /**
+     * Handle file modification events
+     */
+    fun onFileChanged(filePath: String) = updateState { handleFileChanged(filePath) }
+
+    /**
+     * Handle file deletion events
+     */
+    fun onFileDeleted(filePath: String) = updateState { handleFileDeleted(filePath) }
+
+    /**
+     * Handle changes of a dictionary file referenced by config files
+     */
+    fun onDictionaryFileChanged(path: String) = updateState { handleDictionaryFileChanged(path) }
+
+    private fun updateState(action: () -> Unit) {
+        scope.launch(stateDispatcher) { action() }
+    }
+
+    private fun handleFileCreated(filePath: String) {
         val file = File(filePath)
         if (!CSpellConfigDefinition.isConfigFile(file)) return
 
@@ -147,10 +174,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         }
     }
 
-    /**
-     * Handle file modification events
-     */
-    fun onFileChanged(filePath: String) {
+    private fun handleFileChanged(filePath: String) {
         val file = File(filePath)
 
         // Check if this is the currently active config file
@@ -162,10 +186,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         }
     }
 
-    /**
-     * Handle file deletion events
-     */
-    fun onFileDeleted(filePath: String) {
+    private fun handleFileDeleted(filePath: String) {
         val file = File(filePath)
         val searchRoot = resolveSearchRoot(file.absolutePath) ?: return
         val configPath = normalizeFilePath(file.absolutePath)
@@ -213,8 +234,10 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         val job = scope.launch {
             delay(debounceDelay)
             try {
-                loadConfigFile(file)
-                updateGlobalWordList()
+                withContext(stateDispatcher) {
+                    loadConfigFile(file)
+                    updateGlobalWordList()
+                }
             } finally {
                 debounceTimers.remove(filePath, coroutineContext[Job])
             }
@@ -226,7 +249,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     /**
      * Load configuration file and parse words
      */
-    private suspend fun loadConfigFile(file: File) = withContext(Dispatchers.IO) {
+    private fun loadConfigFile(file: File) {
         val configPath = normalizeFilePath(file.absolutePath)
         try {
             val result = parseCSpellConfig(file, project)
@@ -272,7 +295,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      */
     fun isSearchRootConfigFile(path: String): Boolean = resolveSearchRoot(path) != null
 
-    fun onDictionaryFileChanged(path: String) {
+    private fun handleDictionaryFileChanged(path: String) {
         val normalized = normalizeFilePath(path)
         val configs = dictionaryFileToConfigs[normalized]?.toList() ?: emptyList()
         configs.forEach { configPath ->
@@ -361,9 +384,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Clean up resources
      */
     override fun dispose() {
-        scope.cancel()
-        debounceTimers.values.forEach { it.cancel() }
-        debounceTimers.clear()
+        // Pending jobs are cancelled together with the service scope
         clearWords(project)
     }
 }
