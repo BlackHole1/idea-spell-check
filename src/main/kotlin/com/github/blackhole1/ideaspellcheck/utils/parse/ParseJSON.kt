@@ -6,13 +6,6 @@ import kotlinx.serialization.json.Json
 import java.io.File
 
 @Serializable
-data class CSpellWordsFormat(
-    val words: List<String> = emptyList(),
-    val dictionaryDefinitions: List<DictionaryDefinition> = emptyList(),
-    val dictionaries: List<String> = emptyList()
-)
-
-@Serializable
 data class PackageJSONFormat(
     val cspell: CSpellWordsFormat? = null
 )
@@ -31,20 +24,12 @@ fun parseJSON(file: File): ParsedCSpellConfig? {
 
     return try {
         if (isPackageJSON) {
-            val parseRawJSON = json.decodeFromString<PackageJSONFormat>(file.readText())
-            val config = parseRawJSON.cspell
-            if (config == null) {
-                ParsedCSpellConfig()
-            } else {
-                ParsedCSpellConfig(config.words, config.dictionaryDefinitions, config.dictionaries)
-            }
+            json.decodeFromString<PackageJSONFormat>(file.readText()).cspell?.toParsedConfig() ?: ParsedCSpellConfig()
         } else {
-            val parseRawJSON = json.decodeFromString<CSpellWordsFormat>(file.readText())
-            ParsedCSpellConfig(parseRawJSON.words, parseRawJSON.dictionaryDefinitions, parseRawJSON.dictionaries)
+            json.decodeFromString<CSpellWordsFormat>(file.readText()).toParsedConfig()
         }
     } catch (e: Exception) {
         logger.warn("Failed to parse JSON from ${file.path}", e)
         null
     }
-
 }

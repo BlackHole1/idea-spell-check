@@ -29,7 +29,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * key: absolute path of the search directory
      * value: currently active config file
      */
-    private val activeConfigFiles = ConcurrentHashMap<String, File>()
+    private val activeConfigFiles = ConcurrentHashMap<String, ActiveConfigFile>()
 
     /**
      * Word list for each configuration file
@@ -47,6 +47,15 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Reverse index from dictionary files to config files to quickly locate impacted configurations
      */
     private val dictionaryFileToConfigs = ConcurrentHashMap<String, MutableSet<String>>()
+
+    /**
+     * File names of tracked dictionary files (both as declared and canonicalized), used to cheaply reject
+     * unrelated VFS events before resolving canonical paths
+     */
+    private val configFileDictionaryNames = ConcurrentHashMap<String, Set<String>>()
+    private val dictionaryNamesLock = Any()
+    @Volatile
+    private var dictionaryFileNames: Set<String> = emptySet()
 
     private val watchPathsLock = Any()
     @Volatile
@@ -110,13 +119,15 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         configFileWords.clear()
         configFileDictionaryPaths.clear()
         dictionaryFileToConfigs.clear()
+        configFileDictionaryNames.clear()
+        refreshDictionaryFileNames()
         invalidateWatchPaths()
         val allPaths = getAllWatchPaths()
 
         for (path in allPaths) {
             val configFile = findCSpellConfigFile(path)
             if (configFile != null) {
-                activeConfigFiles[path] = configFile
+                activeConfigFiles[path] = ActiveConfigFile(configFile)
                 loadConfigFile(configFile)
             }
         }
@@ -135,8 +146,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         val currentActiveFile = activeConfigFiles[searchRoot]
 
         // Check if the new file has higher priority
-        if (currentActiveFile == null || CSpellConfigDefinition.hasHigherPriority(file, currentActiveFile)) {
-            activeConfigFiles[searchRoot] = file
+        if (currentActiveFile == null || CSpellConfigDefinition.hasHigherPriority(file, currentActiveFile.file)) {
+            activeConfigFiles[searchRoot] = ActiveConfigFile(file)
             debounceParseFile(file)
         }
     }
@@ -170,8 +181,9 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         // Cancel pending debounce
         debounceTimers.remove(configPath)?.cancel()
 
-        // If the deleted file is the currently active file, need to re-evaluate priority
-        if (activeConfigFiles[searchRoot]?.let { normalizeFilePath(it.absolutePath) } == configPath) {
+        // If the deleted file is the currently active file, need to re-evaluate priority.
+        // Re-resolve instead of using the cached path: a deleted symlink no longer resolves to its former target.
+        if (activeConfigFiles[searchRoot]?.let { normalizeFilePath(it.file.absolutePath) } == configPath) {
             reevaluatePriorityForPath(searchRoot)
         }
 
@@ -186,7 +198,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         val newActiveFile = findCSpellConfigFile(normalized)
 
         if (newActiveFile != null) {
-            activeConfigFiles[normalized] = newActiveFile
+            activeConfigFiles[normalized] = ActiveConfigFile(newActiveFile)
             debounceParseFile(newActiveFile)
         } else {
             activeConfigFiles.remove(normalized)
@@ -221,8 +233,8 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
      * Load configuration file and parse words
      */
     private suspend fun loadConfigFile(file: File) = withContext(Dispatchers.IO) {
+        val configPath = normalizeFilePath(file.absolutePath)
         try {
-            val configPath = normalizeFilePath(file.absolutePath)
             val result = parseCSpellConfig(file, project)
             val words = result?.words ?: emptyList()
             val dictionaryPaths = result?.dictionaryPaths ?: emptySet()
@@ -231,7 +243,6 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
             updateDictionaryMappings(configPath, dictionaryPaths)
         } catch (e: Exception) {
             logger.warn("Failed to parse CSpell config: ${file.absolutePath}", e)
-            val configPath = normalizeFilePath(file.absolutePath)
             configFileWords[configPath] = emptyList()
             updateDictionaryMappings(configPath, emptySet())
         }
@@ -245,9 +256,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
 
         // Collect words from all active configuration files
         for (activeFile in activeConfigFiles.values) {
-            val configPath = normalizeFilePath(activeFile.absolutePath)
-            val words = configFileWords[configPath] ?: emptyList()
-            allWords.addAll(words)
+            configFileWords[activeFile.path]?.let { allWords.addAll(it) }
         }
 
         // Update global words with project reference to trigger spell checker update
@@ -255,6 +264,10 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     }
 
     fun isDictionaryFile(path: String): Boolean {
+        // Fast paths: this is called for every VFS event, so avoid resolving canonical paths for unrelated files
+        if (dictionaryFileToConfigs.isEmpty()) return false
+        if (fileNameOf(path) !in dictionaryFileNames) return false
+
         val normalized = normalizeFilePath(path)
         return dictionaryFileToConfigs.containsKey(normalized)
     }
@@ -281,6 +294,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     private fun updateDictionaryMappings(configPath: String, newPaths: Set<String>) {
         val normalizedNew = newPaths.map { normalizeFilePath(it) }.toSet()
         val previous = configFileDictionaryPaths.put(configPath, normalizedNew) ?: emptySet()
+        updateDictionaryFileNames(configPath, (newPaths + normalizedNew).mapTo(mutableSetOf(), ::fileNameOf))
 
         val removed = previous - normalizedNew
         val added = normalizedNew - previous
@@ -306,6 +320,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
 
     private fun removeDictionaryMappings(configPath: String) {
         val previous = configFileDictionaryPaths.remove(configPath) ?: emptySet()
+        updateDictionaryFileNames(configPath, emptySet())
         previous.forEach { dictionaryPath ->
             dictionaryFileToConfigs.compute(dictionaryPath) { _, configs ->
                 configs?.remove(configPath)
@@ -317,11 +332,20 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         }
     }
 
-    private fun normalizeFilePath(path: String): String {
-        return try {
-            toSystemIndependentName(File(path).canonicalPath)
-        } catch (e: java.io.IOException) {
-            toSystemIndependentName(File(path).absolutePath)
+    private fun updateDictionaryFileNames(configPath: String, names: Set<String>) {
+        val previous = if (names.isEmpty()) {
+            configFileDictionaryNames.remove(configPath)
+        } else {
+            configFileDictionaryNames.put(configPath, names)
+        }
+        if (previous != names) {
+            refreshDictionaryFileNames()
+        }
+    }
+
+    private fun refreshDictionaryFileNames() {
+        synchronized(dictionaryNamesLock) {
+            dictionaryFileNames = configFileDictionaryNames.values.flatMapTo(mutableSetOf()) { it }
         }
     }
 
@@ -331,7 +355,7 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
     private fun isActiveConfigFile(file: File): Boolean {
         val searchRoot = resolveSearchRoot(file) ?: return false
         val filePath = normalizeFilePath(file.absolutePath)
-        return activeConfigFiles[searchRoot]?.let { normalizeFilePath(it.absolutePath) } == filePath
+        return activeConfigFiles[searchRoot]?.path == filePath
     }
 
     private fun normalizeSearchRootPath(path: String): String {
@@ -365,6 +389,24 @@ class CSpellConfigFileManager(private val project: Project) : Disposable {
         debounceTimers.clear()
     }
 }
+
+/**
+ * Active config file together with its normalized path, so the path is resolved once instead of on every lookup
+ */
+private class ActiveConfigFile(val file: File) {
+    val path: String = normalizeFilePath(file.absolutePath)
+}
+
+private fun normalizeFilePath(path: String): String {
+    return try {
+        toSystemIndependentName(File(path).canonicalPath)
+    } catch (_: java.io.IOException) {
+        toSystemIndependentName(File(path).absolutePath)
+    }
+}
+
+private fun fileNameOf(path: String): String =
+    toSystemIndependentName(path).trimEnd('/').substringAfterLast('/')
 
 internal fun isPathUnderWatchRoot(path: String, watchRoot: String): Boolean =
     path == watchRoot ||

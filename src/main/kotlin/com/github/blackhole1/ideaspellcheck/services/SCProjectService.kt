@@ -15,7 +15,6 @@ class SCProjectService(private val project: Project) : Disposable {
     private val logger = Logger.getInstance(SCProjectService::class.java)
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val configManager = project.getService(CSpellConfigFileManager::class.java)
-    private lateinit var fileListener: CSpellFileListener
 
     init {
         initializeFileWatching()
@@ -27,12 +26,9 @@ class SCProjectService(private val project: Project) : Disposable {
                 // Initialize scan of all configuration files
                 configManager.initialize()
 
-                // Create file listener
-                fileListener = CSpellFileListener(configManager)
-
-                // Register to message bus
+                // Register file listener to message bus
                 project.messageBus.connect(this@SCProjectService)
-                    .subscribe(VirtualFileManager.VFS_CHANGES, fileListener)
+                    .subscribe(VirtualFileManager.VFS_CHANGES, CSpellFileListener(configManager))
 
             } catch (e: CancellationException) {
                 throw e
