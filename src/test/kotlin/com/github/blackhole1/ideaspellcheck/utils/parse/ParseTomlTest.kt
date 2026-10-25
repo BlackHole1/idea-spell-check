@@ -86,4 +86,23 @@ class ParseTomlTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `parse toml ignores date values of unknown keys`() {
+        val tempDir = Files.createTempDirectory("cspell-toml-date-test").toFile()
+        try {
+            val configFile = File(tempDir, "cspell.config.toml")
+            configFile.writeText(
+                """
+                updated = 2024-01-01
+                reviewed = 2024-01-01T10:00:00
+                words = ["alpha"]
+                """.trimIndent()
+            )
+
+            assertEquals(listOf("alpha"), parseTOML(configFile).words)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }
