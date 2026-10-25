@@ -223,4 +223,37 @@ class DictionaryDefinitionsParseTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `parseYAML accepts schema keys, scalar words and empty documents`() {
+        val tempDir = Files.createTempDirectory("cspell-yaml-test").toFile()
+        try {
+            val config = File(tempDir, "cspell.yaml")
+            config.writeText(
+                """
+                ${'$'}schema: https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json
+                version: "0.2"
+                words:
+                  - alpha
+                  - 2024
+                  - 2024-01-01
+                  - &shared beta
+                  - *shared
+                dictionaryDefinitions:
+                  - name: team
+                    path: ./team.txt
+                    addWords: true
+                """.trimIndent()
+            )
+
+            val parsed = parseYAML(config)
+            assertEquals(listOf("alpha", "2024", "2024-01-01", "beta", "beta"), parsed.words)
+            assertEquals(listOf(DictionaryDefinition("team", "./team.txt", true)), parsed.dictionaryDefinitions)
+
+            config.writeText("")
+            assertEquals(ParsedCSpellConfig(), parseYAML(config))
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }
